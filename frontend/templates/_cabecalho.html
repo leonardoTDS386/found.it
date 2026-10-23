@@ -1,0 +1,118 @@
+{#
+  Cabeçalho das páginas da área logada do Found.it.
+
+  Uso:
+    {% from "_cabecalho.html" import cabecalho %}
+    {{ cabecalho(ativo="busca") }}
+
+  Valores de "ativo": "busca", "cadastrar", "historico"
+#}
+{% macro cabecalho(ativo="") %}
+{% set nome_usuario = session.get('usuario_nome', 'Usuário') %}
+{% set partes_nome = nome_usuario.split() %}
+{% set iniciais = partes_nome[0][0]|upper if partes_nome else 'U' %}
+{% if partes_nome|length > 1 %}
+    {% set iniciais = iniciais ~ partes_nome[-1][0]|upper %}
+{% endif %}
+
+<header class="app-header">
+    <nav class="navbar navbar-expand-lg" data-bs-theme="dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('busca') }}">
+                <img src="{{ url_for('static', filename='img/logo.png') }}"
+                     alt="Found.it">
+            </a>
+
+            <button class="navbar-toggler" type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#menu-principal"
+                    aria-controls="menu-principal"
+                    aria-expanded="false"
+                    aria-label="Abrir menu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="menu-principal">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4 gap-lg-1">
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if ativo == 'busca' }}"
+                           href="{{ url_for('busca') }}"
+                           {% if ativo == 'busca' %}aria-current="page"{% endif %}>
+                            <i class="bi bi-search"></i> Buscar itens
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if ativo == 'cadastrar' }}"
+                           href="{{ url_for('cadastrar_item_perdido') }}"
+                           {% if ativo == 'cadastrar' %}aria-current="page"{% endif %}>
+                            <i class="bi bi-plus-circle"></i>
+                            Cadastrar item perdido
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if ativo == 'historico' }}"
+                           href="{{ url_for('historico') }}"
+                           {% if ativo == 'historico' %}aria-current="page"{% endif %}>
+                            <i class="bi bi-clock-history"></i> Meu histórico
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="dropdown usuario-dropdown">
+                    <button
+                        class="usuario-avatar"
+                        type="button"
+                        id="menu-usuario"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        aria-label="Menu do usuário: {{ nome_usuario }}"
+                        data-nome="{{ nome_usuario }}"
+                    >
+                        {{ iniciais }}
+                    </button>
+
+                    <div class="dropdown-menu dropdown-menu-end usuario-menu"
+                         aria-labelledby="menu-usuario">
+                        <div class="usuario-menu-identificacao">
+                            <span class="usuario-menu-avatar">
+                                {{ iniciais }}
+                            </span>
+                            <div>
+                                <strong>{{ nome_usuario }}</strong>
+                                <small>Conta conectada</small>
+                            </div>
+                        </div>
+
+                        <div class="dropdown-divider"></div>
+
+                        <a class="dropdown-item"
+                           href="{{ url_for('busca') }}">
+                            <i class="bi bi-search"></i> Buscar itens
+                        </a>
+
+                        <a class="dropdown-item"
+                           href="{{ url_for('cadastrar_item_perdido') }}">
+                            <i class="bi bi-plus-circle"></i>
+                            Cadastrar item perdido
+                        </a>
+
+                        <a class="dropdown-item"
+                           href="{{ url_for('historico') }}">
+                            <i class="bi bi-clock-history"></i> Meu histórico
+                        </a>
+
+                        <div class="dropdown-divider"></div>
+
+                        <a class="dropdown-item usuario-sair"
+                           href="{{ url_for('logout') }}">
+                            <i class="bi bi-box-arrow-right"></i> Sair da conta
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>
+{% endmacro %}

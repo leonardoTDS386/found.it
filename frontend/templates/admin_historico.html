@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "_cabecalho_admin.html" import cabecalho_admin %}
+{% from "_mensagens.html" import mensagens %}
+{% from "_historico.html" import registro, balao %}
+
+{% block title %}Histórico do administrador | Found.it - Sistema de achados e perdidos{% endblock %}
+
+{% block content %}
+{{ cabecalho_admin(ativo="historico") }}
+{{ mensagens() }}
+
+<main>
+    <section class="busca-hero">
+        <div class="container">
+            <h1>Histórico do administrador</h1>
+            <p>Clique em um item para ver os detalhes, editar, excluir ou marcar como entregue.</p>
+        </div>
+    </section>
+
+    <div class="container historico-container">
+        <div class="historico-topo">
+            <p class="mb-0" aria-live="polite">
+                <strong id="historico-contador">{{ itens|length }} registros</strong>
+            </p>
+            <div class="filtros-pills" role="group" aria-label="Filtrar por status">
+                <button type="button" class="ativo" data-filtro="todos" aria-pressed="true">
+                    Todos <span>{{ itens|length }}</span>
+                </button>
+                <button type="button" data-filtro="perdido" aria-pressed="false">
+                    Perdidos <span>{{ contagem.perdido }}</span>
+                </button>
+                <button type="button" data-filtro="achado" aria-pressed="false">
+                    Achados <span>{{ contagem.achado }}</span>
+                </button>
+                <button type="button" data-filtro="entregue" aria-pressed="false">
+                    Entregues <span>{{ contagem.entregue }}</span>
+                </button>
+            </div>
+        </div>
+
+        {% if itens %}
+        <div class="historico-lista">
+            {% for item in itens %}
+            {{ registro(item) }}
+            {% endfor %}
+        </div>
+        <div class="estado-vazio" id="historico-filtro-vazio" hidden>
+            <i class="bi bi-inbox" aria-hidden="true"></i>
+            <h2>Nenhum registro neste filtro</h2>
+            <p>Escolha outro status para ver os demais registros.</p>
+        </div>
+        {% else %}
+        <div class="estado-vazio">
+            <i class="bi bi-inbox" aria-hidden="true"></i>
+            <h2>Nenhum registro ainda</h2>
+            <p>Os itens perdidos e achados cadastrados no sistema aparecerão aqui.</p>
+        </div>
+        {% endif %}
+    </div>
+</main>
+
+{% call balao(admin=True) %}{{ itens|tojson }}{% endcall %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/historico.js') }}"></script>
+{% endblock %}

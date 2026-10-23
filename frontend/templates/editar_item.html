@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% from "_cabecalho.html" import cabecalho %}
+{% from "_cabecalho_admin.html" import cabecalho_admin %}
+{% from "_mensagens.html" import mensagens %}
+
+{% block title %}Editar item | Found.it - Sistema de achados e perdidos{% endblock %}
+
+{% block content %}
+{% if admin %}{{ cabecalho_admin(ativo="historico") }}{% else %}{{ cabecalho(ativo="historico") }}{% endif %}
+{{ mensagens() }}
+
+<main>
+    <section class="busca-hero">
+        <div class="container">
+            <h1>Editar item</h1>
+            <p>Atualize as informações do objeto e salve as alterações.</p>
+        </div>
+    </section>
+
+    <div class="container cadastro-container">
+        <form
+            id="cadastro-item-form"
+            class="cadastro-card"
+            method="POST"
+            action="{{ acao }}"
+        >
+            <div class="cadastro-intro">
+                <span class="cadastro-icone">
+                    <i class="bi bi-box-seam"></i>
+                </span>
+                <div>
+                    <h2>Informações do objeto</h2>
+                    <p>{{ item.tipo_registro|rotulo_status }} · {{ item.status|rotulo_status }}</p>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="nome" class="form-label">
+                        Nome do objeto *
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-tag"></i>
+                        </span>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="nome"
+                            name="nome"
+                            value="{{ item.nome }}"
+                            placeholder="Ex.: Garrafa térmica azul"
+                            maxlength="120"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="tipo" class="form-label">
+                        Tipo do objeto *
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-grid"></i>
+                        </span>
+                        <select class="form-select" id="tipo"
+                                name="tipo" required>
+                            <option value="">Selecione o tipo</option>
+                            {% for tipo in tipos %}
+                            <option value="{{ tipo }}" {{ 'selected' if tipo == item.tipo }}>{{ tipo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <label for="descricao" class="form-label">
+                        Descrição do objeto *
+                    </label>
+                    <textarea
+                        class="form-control"
+                        id="descricao"
+                        name="descricao"
+                        rows="4"
+                        maxlength="1000"
+                        placeholder="Descreva a cor, a marca, as características e outros detalhes."
+                        required
+                    >{{ item.descricao }}</textarea>
+                    <div class="form-text">
+                        Quanto mais detalhes, mais fácil será identificar o objeto.
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="local" class="form-label">
+                        {{ 'Local onde foi achado' if item.tipo_registro == 'achado' else 'Local onde foi perdido' }} *
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-geo-alt"></i>
+                        </span>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="local"
+                            name="local"
+                            value="{{ item.local }}"
+                            placeholder="Ex.: Biblioteca, recepção..."
+                            maxlength="200"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="data" class="form-label">
+                        {{ 'Data em que foi achado' if item.tipo_registro == 'achado' else 'Data da perda' }} *
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-calendar-event"></i>
+                        </span>
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="data"
+                            name="data"
+                            value="{{ item.data }}"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="horario" class="form-label">
+                        Horário aproximado *
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-clock"></i>
+                        </span>
+                        <input
+                            type="time"
+                            class="form-control"
+                            id="horario"
+                            name="horario"
+                            value="{{ item.horario }}"
+                            required
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <p class="cadastro-legenda">
+                <i class="bi bi-info-circle"></i>
+                Os campos marcados com * são obrigatórios.
+            </p>
+
+            <div class="cadastro-acoes">
+                <a href="{{ voltar }}"
+                   class="btn btn-outline-primary">
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary"
+                        id="salvar-cadastro">
+                    <i class="bi bi-check-circle"></i>
+                    Salvar alterações
+                </button>
+            </div>
+        </form>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/cadastro_item.js') }}"></script>
+{% endblock %}

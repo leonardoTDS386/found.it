@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "_cabecalho_admin.html" import cabecalho_admin %}
+{% from "_mensagens.html" import mensagens %}
+
+{% block title %}Tipos de objeto | Found.it - Sistema de achados e perdidos{% endblock %}
+
+{% block content %}
+{{ cabecalho_admin(ativo="tipos") }}
+{{ mensagens() }}
+
+<main>
+    <section class="busca-hero">
+        <div class="container">
+            <h1>Tipos de objeto</h1>
+            <p>Gerencie os tipos oferecidos ao cadastrar e buscar itens.</p>
+        </div>
+    </section>
+
+    <div class="container historico-container">
+        <form method="post" action="{{ url_for('admin_tipos') }}" class="tipo-novo" novalidate>
+            <label for="tipo-nome" class="form-label mb-0">Novo tipo</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-grid"></i></span>
+                <input type="text" class="form-control" id="tipo-nome" name="nome"
+                       maxlength="40" required placeholder="Ex.: Bolsa, Instrumento musical">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Adicionar
+                </button>
+            </div>
+        </form>
+
+        <ul class="tipos-lista">
+            {% for tipo, quantidade in uso.items() %}
+            <li class="tipo-linha">
+                <span class="item-card-icon"><i class="bi bi-grid" aria-hidden="true"></i></span>
+                <div class="tipo-info">
+                    <strong>{{ tipo }}</strong>
+                    <small>{{ quantidade }} {{ 'item' if quantidade == 1 else 'itens' }} neste tipo</small>
+                </div>
+                <form method="post" action="{{ url_for('admin_excluir_tipo') }}"
+                      onsubmit="return confirm('Excluir este tipo de objeto?');">
+                    <input type="hidden" name="nome" value="{{ tipo }}">
+                    <button type="submit" class="btn btn-outline-danger btn-sm"
+                            {% if quantidade %}disabled title="Em uso: não pode ser excluído"{% endif %}>
+                        <i class="bi bi-trash"></i> Excluir
+                    </button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+        <p class="cadastro-legenda">
+            <i class="bi bi-info-circle"></i>
+            Tipos em uso por algum item não podem ser excluídos.
+        </p>
+    </div>
+</main>
+{% endblock %}

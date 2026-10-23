@@ -1,0 +1,134 @@
+{#
+  Cartão de um registro do histórico (usado no histórico do usuário e no do
+  administrador). Ao clicar, abre o balão com os detalhes (js/historico.js).
+
+  Uso:
+    {% from "_historico.html" import registro %}
+    {{ registro(item) }}
+#}
+{% macro registro(item) %}
+<button type="button" class="item-card historico-card" data-id="{{ item.id }}"
+        data-status="{{ item.status }}"
+        aria-label="{{ item.nome }} - ver detalhes">
+    <span class="item-card-icon"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
+    <span class="item-card-body">
+        <strong class="item-card-nome">{{ item.nome }}</strong>
+        <span class="item-card-meta"><i class="bi bi-grid" aria-hidden="true"></i><span>{{ item.tipo }}</span></span>
+        <span class="item-card-meta"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>{{ item.local }}</span></span>
+        <span class="item-card-meta"><i class="bi bi-calendar-event" aria-hidden="true"></i><span>Registrado em {{ item.data_registro|data_br }}</span></span>
+    </span>
+    <span class="badge badge-status {{ item.status }}">{{ item.status|rotulo_status }}</span>
+    <i class="bi bi-chevron-right item-card-seta" aria-hidden="true"></i>
+</button>
+{% endmacro %}
+
+{#
+  Balão com os detalhes e as ações do item. Preenchido por js/historico.js.
+  admin=True mostra também "Marcar como entregue" e os dados de quem retirou.
+#}
+{% macro balao(admin=False) %}
+<script type="application/json" id="historico-dados">{{ caller() }}</script>
+
+<div class="modal fade item-modal" id="item-modal" tabindex="-1"
+     aria-labelledby="modal-nome" aria-hidden="true"
+     data-admin="{{ 'sim' if admin else 'nao' }}"
+     data-url-editar="{{ url_for('admin_editar_item' if admin else 'editar_item', item_id=0) }}"
+     data-url-excluir="{{ url_for('admin_excluir_item' if admin else 'excluir_item', item_id=0) }}"
+     {% if admin %}data-url-entregar="{{ url_for('admin_entregar_item', item_id=0) }}"{% endif %}>
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <span id="modal-status" class="badge badge-status mb-2"></span>
+                    <h2 class="modal-title" id="modal-nome"></h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+
+            <div class="modal-body">
+                <dl class="detalhe-lista mb-0">
+                    <dt>Tipo de objeto</dt>
+                    <dd id="modal-tipo-objeto"></dd>
+
+                    <dt>Tipo de registro</dt>
+                    <dd id="modal-registro"></dd>
+
+                    <dt>Descrição</dt>
+                    <dd id="modal-descricao"></dd>
+
+                    <dt id="modal-local-rotulo">Local</dt>
+                    <dd id="modal-local"></dd>
+
+                    <dt id="modal-data-rotulo">Data e horário</dt>
+                    <dd id="modal-data"></dd>
+
+                    <dt>Data do registro</dt>
+                    <dd id="modal-data-registro"></dd>
+
+                    <dt class="grupo-entregue">Data da devolução</dt>
+                    <dd class="grupo-entregue" id="modal-devolucao"></dd>
+
+                    {% if admin %}
+                    <dt class="grupo-entregue">Retirado por</dt>
+                    <dd class="grupo-entregue" id="modal-retirado"></dd>
+                    {% endif %}
+                </dl>
+
+                <p id="modal-bloqueado" class="alert alert-secondary mt-3 mb-0" hidden>
+                    <i class="bi bi-lock" aria-hidden="true"></i>
+                    Itens já entregues não podem ser editados nem excluídos.
+                </p>
+
+                {% if admin %}
+                <!-- Painel: marcar como entregue -->
+                <form method="post" id="painel-entregar" class="painel-acao" hidden novalidate>
+                    <h3>Quem retirou o objeto?</h3>
+                    <div class="mb-2">
+                        <label for="entrega-nome" class="form-label">Nome completo</label>
+                        <input type="text" class="form-control" id="entrega-nome" name="nome"
+                               maxlength="120" required autocomplete="off">
+                    </div>
+                    <div class="mb-3">
+                        <label for="entrega-email" class="form-label">E-mail</label>
+                        <input type="email" class="form-control" id="entrega-email" name="email"
+                               maxlength="120" required autocomplete="off">
+                    </div>
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-fechar-painel>Cancelar</button>
+                        <button type="submit" class="btn btn-success btn-sm">
+                            <i class="bi bi-check-circle"></i> Confirmar entrega
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+
+                <!-- Painel: confirmar exclusão -->
+                <form method="post" id="painel-excluir" class="painel-acao painel-perigo" hidden>
+                    <h3>Excluir este item?</h3>
+                    <p class="mb-3">Essa ação não pode ser desfeita.</p>
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-fechar-painel>Cancelar</button>
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            <i class="bi bi-trash"></i> Excluir definitivamente
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer" id="modal-acoes">
+                {% if admin %}
+                <button type="button" class="btn btn-success" id="acao-entregar">
+                    <i class="bi bi-check-circle"></i> Marcar como entregue
+                </button>
+                {% endif %}
+                <a class="btn btn-outline-primary" id="acao-editar" href="#">
+                    <i class="bi bi-pencil"></i> Editar
+                </a>
+                <button type="button" class="btn btn-outline-danger" id="acao-excluir">
+                    <i class="bi bi-trash"></i> Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}

@@ -1,0 +1,35 @@
+{#
+  Avisos temporários (toasts) da área logada: boas-vindas, sucesso e erro.
+  Eles vêm do Flask (flash) e somem sozinhos depois de alguns segundos.
+
+  Uso:
+    {% from "_mensagens.html" import mensagens %}
+    {{ mensagens() }}
+
+  Categorias aceitas no flash(): "boas-vindas", "sucesso", "erro"
+#}
+{% macro mensagens() %}
+{% set icones = {
+    "boas-vindas": "bi-stars",
+    "sucesso": "bi-check-circle-fill",
+    "erro": "bi-exclamation-triangle-fill"
+} %}
+{% set avisos = get_flashed_messages(with_categories=true) %}
+{% if avisos %}
+<div class="mensagens-area">
+    {% for categoria, texto in avisos %}
+    <div class="toast fi-toast fi-toast-{{ categoria }}"
+         role="{{ 'alert' if categoria == 'erro' else 'status' }}"
+         aria-live="{{ 'assertive' if categoria == 'erro' else 'polite' }}"
+         aria-atomic="true" data-fi-toast>
+        <div class="toast-body">
+            <i class="bi {{ icones.get(categoria, 'bi-info-circle-fill') }}" aria-hidden="true"></i>
+            <div class="flex-grow-1">{{ texto }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"
+                    aria-label="Fechar aviso"></button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}

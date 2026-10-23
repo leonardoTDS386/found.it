@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "_cabecalho_admin.html" import cabecalho_admin %}
+{% from "_mensagens.html" import mensagens %}
+
+{% block title %}Página inicial do administrador | Found.it - Sistema de achados e perdidos{% endblock %}
+
+{% block content %}
+{{ cabecalho_admin(ativo="inicio") }}
+{{ mensagens() }}
+
+<main>
+    <section class="busca-hero">
+        <div class="container">
+            <h1>Página inicial do administrador</h1>
+            <p>Área de gerenciamento do Found.it. Registre itens achados e acompanhe os registros do sistema.</p>
+        </div>
+    </section>
+
+    <div class="container">
+        <!-- Resumo dos itens por status -->
+        <section class="stats-row" aria-label="Resumo dos itens">
+            <div class="stat-tile perdido">
+                <span class="stat-icone"><i class="bi bi-search" aria-hidden="true"></i></span>
+                <div>
+                    <strong>{{ contagem.perdido }}</strong>
+                    <span>Perdidos</span>
+                </div>
+            </div>
+            <div class="stat-tile achado">
+                <span class="stat-icone"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
+                <div>
+                    <strong>{{ contagem.achado }}</strong>
+                    <span>Achados</span>
+                </div>
+            </div>
+            <div class="stat-tile entregue">
+                <span class="stat-icone"><i class="bi bi-check-circle" aria-hidden="true"></i></span>
+                <div>
+                    <strong>{{ contagem.entregue }}</strong>
+                    <span>Entregues</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="acoes">
+            <h2 class="acoes-titulo">O que deseja fazer?</h2>
+            <div class="row g-3">
+                <div class="col-md-6 col-lg-4">
+                    <a class="acao-card" href="{{ url_for('cadastrar_item_achado') }}">
+                        <span class="acao-icone"><i class="bi bi-plus-circle" aria-hidden="true"></i></span>
+                        <span class="acao-texto">
+                            <strong>Cadastrar item achado</strong>
+                            <small>Registre um objeto encontrado para que o dono consiga localizá-lo.</small>
+                        </span>
+                        <i class="bi bi-chevron-right acao-seta" aria-hidden="true"></i>
+                    </a>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <a class="acao-card" href="{{ url_for('admin_historico') }}">
+                        <span class="acao-icone"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
+                        <span class="acao-texto">
+                            <strong>Consultar histórico</strong>
+                            <small>Veja os itens perdidos e achados registrados no sistema.</small>
+                        </span>
+                        <i class="bi bi-chevron-right acao-seta" aria-hidden="true"></i>
+                    </a>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <a class="acao-card" href="{{ url_for('admin_tipos') }}">
+                        <span class="acao-icone"><i class="bi bi-grid" aria-hidden="true"></i></span>
+                        <span class="acao-texto">
+                            <strong>Tipos de objeto</strong>
+                            <small>Adicione ou exclua os tipos usados nos cadastros e na busca.</small>
+                        </span>
+                        <i class="bi bi-chevron-right acao-seta" aria-hidden="true"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+{% endblock %}

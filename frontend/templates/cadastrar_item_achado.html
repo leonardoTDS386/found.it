@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% from "_cabecalho_admin.html" import cabecalho_admin %}
+{% from "_mensagens.html" import mensagens %}
+
+{% block title %}Cadastrar item achado | Found.it{% endblock %}
+
+{% block content %}
+{{ cabecalho_admin(ativo="cadastrar") }}
+{{ mensagens() }}
+
+<main>
+    <section class="busca-hero">
+        <div class="container">
+            <h1>Cadastrar item achado</h1>
+            <p>
+                Registre o objeto encontrado para que o dono consiga localizá-lo.
+                Quanto mais detalhes, mais fácil a identificação.
+            </p>
+        </div>
+    </section>
+
+    <div class="container cadastro-container">
+        <form
+            id="cadastro-item-form"
+            class="cadastro-card"
+            method="POST"
+            action="{{ url_for('cadastrar_item_achado') }}"
+        >
+            <div class="cadastro-intro">
+                <span class="cadastro-icone">
+                    <i class="bi bi-box-seam"></i>
+                </span>
+                <div>
+                    <h2>Informações do objeto</h2>
+                    <p>Preencha os campos abaixo para registrar o item encontrado.</p>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="nome" class="form-label">
+                        Nome do objeto *
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-tag"></i>
+                        </span>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="nome"
+                            name="nome"
+                            placeholder="Ex.: Carteira marrom"
+                            maxlength="120"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="tipo" class="form-label">
+                        Tipo do objeto *
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-grid"></i>
+                        </span>
+                        <select class="form-select" id="tipo"
+                                name="tipo" required>
+                            <option value="">Selecione o tipo</option>
+                            {% for tipo in tipos %}
+                            <option value="{{ tipo }}">{{ tipo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <label for="descricao" class="form-label">
+                        Descrição do objeto *
+                    </label>
+                    <textarea
+                        class="form-control"
+                        id="descricao"
+                        name="descricao"
+                        rows="4"
+                        maxlength="1000"
+                        placeholder="Descreva a cor, a marca, as características e outros detalhes."
+                        required
+                    ></textarea>
+                    <div class="form-text">
+                        Quanto mais detalhes, mais fácil será identificar o objeto.
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label for="local" class="form-label">
+                        Local onde foi encontrado *
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-geo-alt"></i>
+                        </span>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="local"
+                            name="local"
+                            placeholder="Ex.: Biblioteca, recepção..."
+                            maxlength="200"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="data" class="form-label">
+                        Data em que foi encontrado *
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-calendar-event"></i>
+                        </span>
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="data"
+                            name="data"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="horario" class="form-label">
+                        Horário aproximado *
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-clock"></i>
+                        </span>
+                        <input
+                            type="time"
+                            class="form-control"
+                            id="horario"
+                            name="horario"
+                            required
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <p class="cadastro-legenda">
+                <i class="bi bi-info-circle"></i>
+                Os campos marcados com * são obrigatórios.
+            </p>
+
+            <div class="cadastro-acoes">
+                <a href="{{ url_for('admin_painel') }}"
+                   class="btn btn-outline-primary">
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary"
+                        id="salvar-cadastro">
+                    <i class="bi bi-check-circle"></i>
+                    Salvar cadastro
+                </button>
+            </div>
+        </form>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/cadastro_item.js') }}"></script>
+{% endblock %}

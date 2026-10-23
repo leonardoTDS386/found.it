@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "_cabecalho.html" import cabecalho %}
+{% from "_mensagens.html" import mensagens %}
+{% from "_historico.html" import registro, balao %}
+
+{% block title %}Meu histórico | Found.it - Sistema de achados e perdidos{% endblock %}
+
+{% block content %}
+{{ cabecalho(ativo="historico") }}
+{{ mensagens() }}
+
+<main>
+    <section class="busca-hero">
+        <div class="container">
+            <h1>Meu histórico</h1>
+            <p>Consulte os itens que você registrou. Clique em um item para ver os detalhes, editar ou excluir.</p>
+        </div>
+    </section>
+
+    <div class="container historico-container">
+        <div class="historico-topo">
+            <p class="mb-0">
+                <strong>{{ itens|length }}</strong>
+                {{ 'item registrado' if itens|length == 1 else 'itens registrados' }}
+            </p>
+            <a href="{{ url_for('cadastrar_item_perdido') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> Cadastrar item perdido
+            </a>
+        </div>
+
+        {% if itens %}
+        <div class="historico-lista">
+            {% for item in itens %}
+            {{ registro(item) }}
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="estado-vazio">
+            <i class="bi bi-clock-history" aria-hidden="true"></i>
+            <h2>Você ainda não registrou nenhum item</h2>
+            <p>Quando você cadastrar um item perdido, ele aparecerá aqui junto com o status e a data de devolução.</p>
+        </div>
+        {% endif %}
+    </div>
+</main>
+
+{% call balao() %}{{ itens|tojson }}{% endcall %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/historico.js') }}"></script>
+{% endblock %}

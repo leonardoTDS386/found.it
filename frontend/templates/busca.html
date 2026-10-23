@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% from "_cabecalho.html" import cabecalho %}
+{% from "_mensagens.html" import mensagens %}
+
+{% block title %}Buscar itens | Found.it - Sistema de achados e perdidos{% endblock %}
+
+{% block content %}
+{{ cabecalho(ativo="busca") }}
+{{ mensagens() }}
+
+<main>
+    <!-- Faixa de destaque com a busca -->
+    <section class="busca-hero">
+        <div class="container">
+            <h1>Procure seu objeto</h1>
+            <p>Informe o que você perdeu e veja se alguém já o encontrou.</p>
+        </div>
+    </section>
+
+    <div class="container">
+        <form id="busca-form" class="busca-card" novalidate
+              data-itens-url="{{ url_for('api_itens') }}"
+              data-cadastrar-url="{{ url_for('cadastrar_item_perdido') }}">
+            <div class="row g-3 align-items-end">
+
+                <div class="col-md-6 col-xl-3">
+                    <label for="nome" class="form-label">Nome do objeto</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-box-seam"></i></span>
+                        <input type="text" class="form-control" id="nome" name="nome"
+                               placeholder="Ex.: garrafa, chaves" autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-xl-2">
+                    <label for="tipo" class="form-label">Tipo</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-grid"></i></span>
+                        <select class="form-select" id="tipo" name="tipo">
+                            <option value="">Todos</option>
+                            {% for tipo in tipos %}
+                            <option value="{{ tipo }}">{{ tipo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-xl-2">
+                    <label for="local" class="form-label">Local da perda</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+                        <input type="text" class="form-control" id="local" name="local"
+                               placeholder="Ex.: recepção" autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-xl-3">
+                    <label for="data" class="form-label">Data em que foi perdido</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
+                        <input type="date" class="form-control" id="data" name="data">
+                    </div>
+                </div>
+
+                <div class="col-12 col-xl-2">
+                    <button type="submit" id="busca-botao" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> <span class="rotulo">Buscar</span>
+                    </button>
+                </div>
+
+            </div>
+        </form>
+
+        <!-- Resultados (aparecem aqui mesmo, sem trocar de página) -->
+        <section class="resultados" aria-live="polite">
+            <div id="resultados">
+                <div class="estado-vazio">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <h2>Faça sua busca</h2>
+                    <p>Preencha os campos acima e clique em <strong>Buscar</strong>. Se deixar tudo em branco, mostramos todos os itens.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<!-- Balão com os detalhes do item -->
+<div class="modal fade item-modal" id="item-modal" tabindex="-1"
+     aria-labelledby="modal-nome" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <span id="modal-status" class="badge badge-status mb-2"></span>
+                    <h2 class="modal-title" id="modal-nome"></h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="detalhe-lista">
+                    <dt>Tipo de objeto</dt>
+                    <dd id="modal-tipo-objeto"></dd>
+
+                    <dt>Registro</dt>
+                    <dd id="modal-registro"></dd>
+
+                    <dt>Descrição</dt>
+                    <dd id="modal-descricao"></dd>
+
+                    <dt id="modal-local-rotulo">Local</dt>
+                    <dd id="modal-local"></dd>
+
+                    <dt id="modal-data-rotulo">Data e horário</dt>
+                    <dd id="modal-data" class="mb-0"></dd>
+                </dl>
+
+                <div id="modal-aviso" class="alert alert-info d-none mt-3 mb-0" role="status"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-primary d-none" id="modal-solicitar">
+                    <i class="bi bi-hand-index-thumb"></i> Solicitar devolução
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/busca.js') }}"></script>
+{% endblock %}

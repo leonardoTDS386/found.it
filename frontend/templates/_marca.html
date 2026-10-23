@@ -1,0 +1,38 @@
+{#
+  Painel da marca do Found.it (lado esquerdo no desktop, topo no celular).
+  Compartilhado pelas páginas de login, cadastro e login do administrador.
+
+  Uso:
+    {% from "_marca.html" import painel_marca %}
+    {{ painel_marca() }}                          -> textos padrão (usuário)
+    {{ painel_marca(titulo=[...], texto="...", itens=[("bi-icone", "texto")]) }}
+#}
+{% macro painel_marca(
+    titulo=["Perdeu algo?", "A gente ajuda a encontrar."],
+    texto="Um só lugar para registrar, procurar e devolver objetos perdidos, de forma simples e segura.",
+    itens=[
+        ("bi-search", "Busque itens com filtros por nome, local e data"),
+        ("bi-bell", "Receba avisos de novos itens encontrados"),
+        ("bi-shield-check", "Devolução registrada e acompanhada")
+    ]
+) %}
+<section class="auth-brand">
+    <div class="auth-brand-inner">
+        <img src="{{ url_for('static', filename='img/logo.png') }}"
+             alt="Found.it" class="auth-logo">
+
+        <h1 class="auth-headline">
+            {%- for linha in titulo -%}
+                {{ linha }}{% if not loop.last %}<br>{% endif %}
+            {%- endfor -%}
+        </h1>
+        <p class="auth-lead">{{ texto }}</p>
+
+        <ul class="auth-features">
+            {% for icone, descricao in itens %}
+            <li><i class="bi {{ icone }}"></i> {{ descricao }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+{% endmacro %}

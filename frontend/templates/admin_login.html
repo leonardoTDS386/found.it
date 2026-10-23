@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% from "_marca.html" import painel_marca %}
+{% from "_mensagens.html" import mensagens %}
+
+{% block title %}Login do administrador | Found.it - Sistema de achados e perdidos{% endblock %}
+
+{% block content %}
+{{ mensagens() }}
+<main class="auth-page">
+
+    <!-- Painel da marca (compartilhado, com textos da área do administrador) -->
+    {{ painel_marca(
+        titulo=["Área do administrador", "Gerencie achados e devoluções."],
+        texto="Acesso restrito a administradores do Found.it. Cadastre itens achados, analise solicitações e registre devoluções.",
+        itens=[
+            ("bi-box-seam", "Cadastre os itens achados"),
+            ("bi-clipboard-check", "Analise as solicitações de devolução"),
+            ("bi-tags", "Registre devoluções e gerencie categorias")
+        ]
+    ) }}
+
+    <!-- Formulário de login do administrador -->
+    <section class="auth-form-side">
+        <div class="auth-card">
+
+            <img src="{{ url_for('static', filename='img/logo-icon.png') }}"
+                 alt="" class="auth-card-icon d-lg-none">
+
+            <span class="admin-badge">
+                <i class="bi bi-shield-lock-fill"></i> Área restrita
+            </span>
+
+            <p class="auth-eyebrow">Found.it - Sistema de achados e perdidos</p>
+            <h2 class="auth-title">Login do administrador</h2>
+            <p class="auth-subtitle">Entre com as credenciais de administrador para acessar o painel.</p>
+
+            <form id="login-form" method="post" action="{{ url_for('admin_login') }}" novalidate>
+                <div class="mb-3">
+                    <label for="email" class="form-label">E-mail do administrador</label>
+                    <div class="input-group has-validation">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                        <input type="email" class="form-control" id="email" name="email"
+                               placeholder="admin@exemplo.com" autocomplete="email"
+                               value="{{ email or '' }}" required>
+                        <div class="invalid-feedback">Informe um e-mail válido.</div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="senha" class="form-label">Senha</label>
+                    <div class="input-group has-validation">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input type="password" class="form-control" id="senha" name="senha"
+                               placeholder="Sua senha" autocomplete="current-password"
+                               minlength="6" required>
+                        <button class="btn btn-toggle-senha" type="button" id="toggle-senha"
+                                aria-label="Mostrar ou ocultar senha">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <div class="invalid-feedback">A senha deve ter pelo menos 6 caracteres.</div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100">Entrar</button>
+            </form>
+
+            <div class="auth-links">
+                <hr>
+                <a href="{{ url_for('login') }}" class="admin-link">
+                    <i class="bi bi-arrow-left"></i> Voltar ao login de usuário
+                </a>
+            </div>
+        </div>
+    </section>
+
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        const form = document.getElementById('login-form');
+        const senha = document.getElementById('senha');
+        const toggle = document.getElementById('toggle-senha');
+
+        // Mostrar / ocultar senha
+        toggle.addEventListener('click', function () {
+            const mostrando = senha.type === 'text';
+            senha.type = mostrando ? 'password' : 'text';
+            toggle.querySelector('i').className = mostrando ? 'bi bi-eye' : 'bi bi-eye-slash';
+        });
+
+        // Validação no front-end; estando tudo certo, o formulário é enviado ao servidor.
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                form.classList.add('was-validated');
+            }
+        });
+    })();
+</script>
+{% endblock %}
