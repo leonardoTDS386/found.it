@@ -10,7 +10,6 @@ back-end estiver pronto, a autenticação e o armazenamento de itens passam a se
 feitos pela API REST, e estas partes devem ser removidas.
 """
 
-import hmac
 import os
 import re
 from datetime import date, datetime
@@ -29,6 +28,9 @@ from flask import (
 
 import armazenamento
 
+import api_cliente
+from api_cliente import ApiIndisponivel, ErroApi, SessaoExpirada
+
 app = Flask(__name__)
 
 # Chave usada para assinar a sessão. Em produção, defina FOUNDIT_SECRET_KEY.
@@ -36,8 +38,12 @@ app.secret_key = os.environ.get(
     "FOUNDIT_SECRET_KEY", "foundit-chave-provisoria-de-desenvolvimento"
 )
 
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+MENSAGEM_API_FORA = "Não foi possível falar com o servidor agora. Tente novamente em instantes."
+
 # --- Contas provisórias -----------------------------------------------------
-CONTAS_PROVISORIAS = [
+"""CONTAS_PROVISORIAS = [
     {
         "perfil": "usuario",
         "nome": "Leonardo Vínicius",
@@ -50,7 +56,7 @@ CONTAS_PROVISORIAS = [
         "email": "admin@foundit.com",
         "senha": "admin123",
     },
-]
+]"""
 
 ROTULOS_STATUS = {"perdido": "Perdido", "achado": "Achado", "entregue": "Entregue"}
 
@@ -70,29 +76,70 @@ def rotulo_status(valor):
     return ROTULOS_STATUS.get(valor, valor)
 
 
+def nomes_dos_tipos():
+    """Nomes dos tipos de objeto, vindos da API (para listas e validação)."""
+    return [t["nome"] for t in api_cliente.listar_tipos()]
+
+
+def item_do_site(item):
+    """Converte um item da API para o formato que os templates e scripts usam."""
+    convertido = dict(item)
+    convertido["tipo"] = item["tipo"]["nome"]      # a API manda {id, nome}
+    convertido["horario"] = item["horario"][:5]    # "12:30:00" -> "12:30"
+    return convertido
+
+
+def cadastrar_pela_api(form, achado=False):
+    """Valida e cadastra o item pela API. Devolve a lista de erros (vazia se deu certo)."""
+    erros = validar_item(form, achado=achado)
+    if erros:
+        return erros
+
+    dados = dados_do_item(form)
+    nome_do_tipo = dados.pop("tipo")      # tira o nome do tipo uma única vez
+    tipo_id = next(
+        (t["id"] for t in api_cliente.listar_tipos() if t["nome"] == nome_do_tipo),
+        None,
+    )
+    if tipo_id is None:
+        return ["Selecione um tipo de objeto válido."]
+    dados["tipo_id"] = tipo_id
+
+    try:
+        api_cliente.requisitar("POST", "/api/itens", json=dados)
+    except ApiIndisponivel:
+        raise
+    except ErroApi as erro:
+        return [erro.mensagem]
+    return []
+
+
 # --- Autenticação -----------------------------------------------------------
-def _igual(a, b):
-    """Compara textos em tempo constante (evita vazar informação pelo tempo)."""
-    return hmac.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
-
-
 def autenticar(perfil, email, senha):
-    """Devolve a conta se e-mail e senha conferem para o perfil, senão None."""
-    email = (email or "").strip().lower()
-    senha = senha or ""
-    for conta in CONTAS_PROVISORIAS:
-        if conta["perfil"] != perfil:
-            continue
-        if _igual(conta["email"], email) and _igual(conta["senha"], senha):
-            return conta
-    return None
+    """Entra pela API. Devolve (usuario, tokens) ou None se não servir para o perfil."""
+    try:
+        tokens, usuario = api_cliente.entrar(email.strip(), senha)
+    except ApiIndisponivel:
+        raise
+    except ErroApi as erro:
+        if erro.status in (401, 422):    # senha errada ou e-mail em formato inválido
+            return None
+        raise
+
+    if usuario["perfil"] != perfil:
+        # Ex.: conta de administrador tentando entrar pelo login de usuário.
+        api_cliente.sair(tokens["refresh_token"])
+        return None
+    return usuario, tokens
 
 
-def iniciar_sessao(conta):
+def iniciar_sessao(usuario, tokens):
     session.clear()
-    session["usuario_nome"] = conta["nome"]
-    session["usuario_email"] = conta["email"]
-    session["perfil"] = conta["perfil"]
+    session["usuario_nome"] = usuario["nome"]
+    session["usuario_email"] = usuario["email"]
+    session["perfil"] = usuario["perfil"]
+    session["token_acesso"] = tokens["access_token"]
+    session["token_refresh"] = tokens["refresh_token"]
 
 
 def login_obrigatorio(perfil):
@@ -141,10 +188,15 @@ def login():
     email = ""
     if request.method == "POST":
         email = request.form.get("email", "")
-        conta = autenticar("usuario", email, request.form.get("senha"))
-        if conta:
-            iniciar_sessao(conta)
-            primeiro_nome = conta["nome"].split()[0]
+        try:
+            resultado = autenticar("usuario", email, request.form.get("senha", ""))
+        except ApiIndisponivel:
+            flash(MENSAGEM_API_FORA, "erro")
+            return render_template("login.html", email=email), 503
+        if resultado:
+            usuario, tokens = resultado
+            iniciar_sessao(usuario, tokens)
+            primeiro_nome = usuario["nome"].split()[0]
             flash(
                 f"Boas-vindas ao Found.it, {primeiro_nome}! "
                 "Procure seus objetos ou cadastre um item perdido.",
@@ -165,9 +217,14 @@ def admin_login():
     email = ""
     if request.method == "POST":
         email = request.form.get("email", "")
-        conta = autenticar("admin", email, request.form.get("senha"))
-        if conta:
-            iniciar_sessao(conta)
+        try:
+            resultado = autenticar("admin", email, request.form.get("senha", ""))
+        except ApiIndisponivel:
+            flash(MENSAGEM_API_FORA, "erro")
+            return render_template("admin_login.html", email=email), 503
+        if resultado:
+            usuario, tokens = resultado
+            iniciar_sessao(usuario, tokens)
             flash("Boas-vindas ao Found.it, Administrador!", "boas-vindas")
             return redirect(url_for("admin_painel"))
         flash("E-mail ou senha incorretos.", "erro")
@@ -177,6 +234,7 @@ def admin_login():
 @app.route("/logout")
 def logout():
     destino = "admin_login" if session.get("perfil") == "admin" else "login"
+    api_cliente.sair(session.get("token_refresh"))   # revoga o refresh na API
     session.clear()
     flash("Você saiu da sua conta.", "sucesso")
     return redirect(url_for(destino))
@@ -192,7 +250,7 @@ def validar_item(form, achado=False):
     if not nome or len(nome) > 120:
         erros.append("Informe o nome do objeto (até 120 caracteres).")
 
-    if form.get("tipo") not in armazenamento.listar_tipos():
+    if form.get("tipo") not in nomes_dos_tipos():
         erros.append("Selecione um tipo de objeto válido.")
 
     descricao = form.get("descricao", "").strip()
@@ -238,45 +296,37 @@ def dados_do_item(form):
 @login_obrigatorio("usuario")
 def busca():
     """Página inicial do usuário: busca de itens perdidos e achados."""
-    return render_template("busca.html", tipos=armazenamento.listar_tipos())
+    return render_template("busca.html", tipos=nomes_dos_tipos())
 
 
 @app.route("/api/itens")
 def api_itens():
-    """Itens para a busca. Futuramente virá da API REST."""
+    """Itens para a busca, vindos da API."""
     if session.get("perfil") != "usuario":
         return jsonify({"erro": "Faça login para buscar itens."}), 401
-    return jsonify(armazenamento.listar_publicos())
+    itens = api_cliente.requisitar("GET", "/api/itens")
+    return jsonify([item_do_site(i) for i in itens])
 
 
 @app.route("/cadastrar-item-perdido", methods=["GET", "POST"])
 @login_obrigatorio("usuario")
 def cadastrar_item_perdido():
     if request.method == "POST":
-        erros = validar_item(request.form)
+        erros = cadastrar_pela_api(request.form)
         if erros:
             for erro in erros:
                 flash(erro, "erro")
             return (
-                render_template(
-                    "cadastrar_item_perdido.html", tipos=armazenamento.listar_tipos()
-                ),
+                render_template("cadastrar_item_perdido.html", tipos=nomes_dos_tipos()),
                 400,
             )
-
-        armazenamento.adicionar(
-            tipo_registro="perdido",
-            registrado_por=session["usuario_email"],
-            **dados_do_item(request.form),
-        )
         flash(
-            "Item cadastrado com sucesso! Você pode acompanhá-lo em "
-            "Meu histórico.",
+            "Item cadastrado com sucesso! Você pode acompanhá-lo em Meu histórico.",
             "sucesso",
         )
         return redirect(url_for("busca"))
 
-    return render_template("cadastrar_item_perdido.html", tipos=armazenamento.listar_tipos())
+    return render_template("cadastrar_item_perdido.html", tipos=nomes_dos_tipos())
 
 
 def pode_alterar(item, perfil, email):
@@ -318,7 +368,7 @@ def _editar_item(item_id, destino, template_voltar):
                 render_template(
                     "editar_item.html",
                     item={**item, **enviado},
-                    tipos=armazenamento.listar_tipos(),
+                    tipos=nomes_dos_tipos(),
                     admin=admin,
                     acao=acao,
                     voltar=url_for(destino),
@@ -332,7 +382,7 @@ def _editar_item(item_id, destino, template_voltar):
     return render_template(
         "editar_item.html",
         item=item,
-        tipos=armazenamento.listar_tipos(),
+        tipos=nomes_dos_tipos(),
         admin=admin,
         acao=acao,
         voltar=url_for(destino),
@@ -382,30 +432,21 @@ def admin_painel():
 @login_obrigatorio("admin")
 def cadastrar_item_achado():
     if request.method == "POST":
-        erros = validar_item(request.form, achado=True)
+        erros = cadastrar_pela_api(request.form, achado=True)
         if erros:
             for erro in erros:
                 flash(erro, "erro")
             return (
-                render_template(
-                    "cadastrar_item_achado.html", tipos=armazenamento.listar_tipos()
-                ),
+                render_template("cadastrar_item_achado.html", tipos=nomes_dos_tipos()),
                 400,
             )
-
-        armazenamento.adicionar(
-            tipo_registro="achado",
-            registrado_por=session["usuario_email"],
-            **dados_do_item(request.form),
-        )
         flash(
-            "Item achado cadastrado com sucesso! Ele já aparece na busca "
-            "dos usuários.",
+            "Item achado cadastrado com sucesso! Ele já aparece na busca dos usuários.",
             "sucesso",
         )
         return redirect(url_for("admin_painel"))
 
-    return render_template("cadastrar_item_achado.html", tipos=armazenamento.listar_tipos())
+    return render_template("cadastrar_item_achado.html", tipos=nomes_dos_tipos())
 
 
 @app.route("/admin/historico")
@@ -485,6 +526,24 @@ def admin_excluir_tipo():
         flash(f"Tipo \u201c{nome}\u201d excluído.", "sucesso")
     return redirect(url_for("admin_tipos"))
 
+
+@app.errorhandler(SessaoExpirada)
+def sessao_expirada(_erro):
+    """O token venceu e não deu para renovar: volta ao login."""
+    if request.path.startswith("/api/"):
+        return jsonify({"erro": "Sessão expirada."}), 401
+    destino = "admin_login" if session.get("perfil") == "admin" else "login"
+    session.clear()
+    flash("Sua sessão expirou. Entre novamente.", "erro")
+    return redirect(url_for(destino))
+
+
+@app.errorhandler(ApiIndisponivel)
+def api_indisponivel(_erro):
+    """A API está fora do ar."""
+    if request.path.startswith("/api/"):
+        return jsonify({"erro": MENSAGEM_API_FORA}), 503
+    return render_template("erro_api.html"), 503
 
 if __name__ == "__main__":
     # debug=True recarrega o servidor ao editar arquivos. Desative em produção.

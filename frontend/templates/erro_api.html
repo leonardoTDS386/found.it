@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_cabecalho.html" import cabecalho %}
+{% from "_cabecalho_admin.html" import cabecalho_admin %}
+
+{% block title %}Servidor indisponível | Found.it{% endblock %}
+
+{% block content %}
+{% if session.get('perfil') == 'admin' %}
+{{ cabecalho_admin(ativo="") }}
+{% else %}
+{{ cabecalho(ativo="") }}
+{% endif %}
+
+<main>
+    <div class="container py-5">
+        <div class="estado-vazio">
+            <i class="bi bi-cloud-slash" aria-hidden="true"></i>
+            <h2>Servidor indisponível</h2>
+            <p>Não foi possível falar com o servidor agora. Tente novamente em instantes.</p>
+            <a class="btn btn-outline-primary btn-sm" href="{{ request.url }}">Tentar de novo</a>
+        </div>
+    </div>
+</main>
+{% endblock %}

@@ -43,6 +43,12 @@
         aplicar(botao.dataset.filtro);
       });
     });
+
+    // Vindo dos containers da página inicial: /admin/historico?status=achado
+    const pedido = new URLSearchParams(window.location.search).get("status");
+    if (pedido && ["perdido", "achado", "entregue"].includes(pedido)) {
+      aplicar(pedido);
+    }
   }
 
   // ---------- Balão de detalhes ----------

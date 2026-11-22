@@ -21,3 +21,8 @@ instance/
 .idea/
 .DS_Store
 Thumbs.db
+
+foundit.db
+*.db
+__pychache__/
+

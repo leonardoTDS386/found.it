@@ -19,27 +19,27 @@
     <div class="container">
         <!-- Resumo dos itens por status -->
         <section class="stats-row" aria-label="Resumo dos itens">
-            <div class="stat-tile perdido">
+            <a class="stat-tile perdido" href="{{ url_for('admin_historico', status='perdido') }}">
                 <span class="stat-icone"><i class="bi bi-search" aria-hidden="true"></i></span>
                 <div>
                     <strong>{{ contagem.perdido }}</strong>
                     <span>Perdidos</span>
                 </div>
-            </div>
-            <div class="stat-tile achado">
+            </a>
+            <a class="stat-tile achado" href="{{ url_for('admin_historico', status='achado') }}">
                 <span class="stat-icone"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
                 <div>
                     <strong>{{ contagem.achado }}</strong>
                     <span>Achados</span>
                 </div>
-            </div>
-            <div class="stat-tile entregue">
+            </a>
+            <a class="stat-tile entregue" href="{{ url_for('admin_historico', status='entregue') }}">
                 <span class="stat-icone"><i class="bi bi-check-circle" aria-hidden="true"></i></span>
                 <div>
                     <strong>{{ contagem.entregue }}</strong>
                     <span>Entregues</span>
                 </div>
-            </div>
+            </a>
         </section>
 
         <section class="acoes">
