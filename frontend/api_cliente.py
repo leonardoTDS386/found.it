@@ -118,3 +118,8 @@ def sair(refresh_token):
 def listar_tipos():
     """Tipos de objeto: lista de {id, nome}."""
     return requisitar("GET", "/api/tipos")
+
+
+def cadastrar_usuario(dados):
+    """Cria uma conta de usuário (rota pública, sem token)."""
+    return _resultado(_enviar("POST", "/api/auth/cadastro", json=dados))

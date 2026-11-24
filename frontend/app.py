@@ -1,13 +1,8 @@
 """Found.it - Sistema de achados e perdidos.
 
-Servidor Flask usado para servir o front-end.
-A integração com a API REST (back-end) será feita em uma etapa posterior.
-
-ATENÇÃO - CÓDIGO PROVISÓRIO
-As contas abaixo e o armazenamento em memória (armazenamento.py) existem só
-para o site ficar funcional durante o desenvolvimento do front-end. Quando o
-back-end estiver pronto, a autenticação e o armazenamento de itens passam a ser
-feitos pela API REST, e estas partes devem ser removidas.
+Servidor Flask do front-end. Ele serve as páginas e conversa com a API REST
+(pasta backend) por meio do api_cliente.py. Os tokens de acesso ficam na
+sessão do Flask
 """
 
 import os
@@ -26,7 +21,6 @@ from flask import (
     url_for,
 )
 
-import armazenamento
 
 import api_cliente
 from api_cliente import ApiIndisponivel, ErroApi, SessaoExpirada
@@ -89,6 +83,28 @@ def item_do_site(item):
     return convertido
 
 
+def tipo_id_por_nome(nome):
+    """Id do tipo na API, ou None se não existir."""
+    return next(
+        (t["id"] for t in api_cliente.listar_tipos() if t["nome"] == nome), None
+    )
+
+
+def buscar_item_para_alterar(item_id):
+    """Item no formato do site, ou None se não existir ou não for do usuário."""
+    try:
+        if session["perfil"] == "admin":
+            item = api_cliente.requisitar("GET", f"/api/admin/itens/{item_id}")
+        else:
+            meus = api_cliente.requisitar("GET", "/api/itens/meus")
+            item = next((i for i in meus if i["id"] == item_id), None)
+    except ErroApi as erro:
+        if erro.status == 404:
+            return None
+        raise
+    return item_do_site(item) if item else None
+
+
 def cadastrar_pela_api(form, achado=False):
     """Valida e cadastra o item pela API. Devolve a lista de erros (vazia se deu certo)."""
     erros = validar_item(form, achado=achado)
@@ -107,7 +123,7 @@ def cadastrar_pela_api(form, achado=False):
 
     try:
         api_cliente.requisitar("POST", "/api/itens", json=dados)
-    except ApiIndisponivel:
+    except (ApiIndisponivel, SessaoExpirada):
         raise
     except ErroApi as erro:
         return [erro.mensagem]
@@ -207,9 +223,27 @@ def login():
     return render_template("login.html", email=email)
 
 
-@app.route("/cadastro")
+@app.route("/cadastro", methods=["GET", "POST"])
 def cadastro():
-    return render_template("cadastro.html")
+    if request.method == "POST":
+        erros = validar_cadastro(request.form)
+        if not erros:
+            try:
+                api_cliente.cadastrar_usuario(dados_do_cadastro(request.form))
+            except ApiIndisponivel:
+                erros = [MENSAGEM_API_FORA]
+            except ErroApi as erro:
+                erros = [erro.mensagem]
+
+        if erros:
+            for mensagem in erros:
+                flash(mensagem, "erro")
+            return render_template("cadastro.html", valores=request.form), 400
+
+        flash("Cadastro realizado com sucesso! Entre com seu e-mail e senha.", "sucesso")
+        return redirect(url_for("login"))
+
+    return render_template("cadastro.html", valores={})
 
 
 @app.route("/admin/login", methods=["GET", "POST"])
@@ -291,6 +325,70 @@ def dados_do_item(form):
     }
 
 
+def cpf_valido(cpf):
+    """CPF com 11 dígitos e dígitos verificadores corretos (mesma regra do site)."""
+    if len(cpf) != 11 or cpf == cpf[0] * 11:
+        return False
+    for t in (9, 10):
+        soma = sum(int(cpf[i]) * (t + 1 - i) for i in range(t))
+        if ((soma * 10) % 11) % 10 != int(cpf[t]):
+            return False
+    return True
+
+
+def validar_cadastro(form):
+    """Valida o cadastro no servidor. Devolve a lista de erros."""
+    erros = []
+
+    nome = " ".join(form.get("nome", "").split())
+    if len(nome.split()) < 2 or len(nome) > 150:
+        erros.append("Informe nome e sobrenome.")
+
+    email = form.get("email", "").strip()
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 120:
+        erros.append("Informe um e-mail válido.")
+
+    if not cpf_valido(re.sub(r"\D", "", form.get("cpf", ""))):
+        erros.append("Informe um CPF válido.")
+
+    telefone = form.get("telefone", "").strip()
+    if len(re.sub(r"\D", "", telefone)) not in (10, 11) or len(telefone) > 20:
+        erros.append("Informe um telefone válido com DDD.")
+
+    endereco = form.get("endereco", "").strip()
+    if len(endereco) < 10 or len(endereco) > 255:
+        erros.append("Informe o endereço completo.")
+
+    senha = form.get("senha", "")
+    if (
+        len(senha) < 8
+        or len(senha) > 128
+        or not re.search(r"[A-Za-z]", senha)
+        or not re.search(r"\d", senha)
+    ):
+        erros.append("A senha deve ter pelo menos 8 caracteres, com letras e números.")
+    elif senha != form.get("senha2", ""):
+        erros.append("As senhas não coincidem.")
+
+    if not form.get("consentimento"):
+        erros.append("É necessário autorizar o uso dos dados para criar a conta.")
+
+    return erros
+
+
+def dados_do_cadastro(form):
+    """Campos do cadastro já limpos, no formato que a API espera."""
+    cpf = re.sub(r"\D", "", form["cpf"])
+    return {
+        "nome": " ".join(form["nome"].split()),
+        "email": form["email"].strip().lower(),
+        "cpf": f"{cpf[:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:]}",
+        "telefone": form["telefone"].strip(),
+        "endereco": form["endereco"].strip(),
+        "senha": form["senha"],
+    }
+
+
 # --- Área do usuário --------------------------------------------------------
 @app.route("/busca")
 @login_obrigatorio("usuario")
@@ -329,74 +427,70 @@ def cadastrar_item_perdido():
     return render_template("cadastrar_item_perdido.html", tipos=nomes_dos_tipos())
 
 
-def pode_alterar(item, perfil, email):
-    """Itens entregues ficam congelados. Admin altera os demais; o usuário, só os seus."""
-    if item is None or item["status"] == "entregue":
-        return False
-    return perfil == "admin" or item["registrado_por"] == email
-
-
-def _item_alteravel_ou_redireciona(item_id, destino):
-    """Devolve (item, None) se o perfil logado pode alterar, senão (None, resposta)."""
-    item = armazenamento.obter(item_id)
+def _editar_item(item_id, destino, template_voltar):
+    item = buscar_item_para_alterar(item_id)
     if item is None:
         flash("Item não encontrado.", "erro")
-        return None, redirect(url_for(destino))
-    if not pode_alterar(item, session["perfil"], session["usuario_email"]):
-        if item["status"] == "entregue":
-            flash("Itens já entregues não podem ser alterados.", "erro")
-        else:
-            flash("Você só pode alterar os itens registrados por você.", "erro")
-        return None, redirect(url_for(destino))
-    return item, None
+        return redirect(url_for(destino))
+    if item["status"] == "entregue":
+        flash("Itens já entregues não podem ser alterados.", "erro")
+        return redirect(url_for(destino))
 
-
-def _editar_item(item_id, destino, template_voltar):
-    item, resposta = _item_alteravel_ou_redireciona(item_id, destino)
-    if resposta:
-        return resposta
     admin = session["perfil"] == "admin"
     acao = url_for("admin_editar_item" if admin else "editar_item", item_id=item_id)
 
+    def mostrar(item_exibido, codigo=200):
+        return (
+            render_template(
+                "editar_item.html",
+                item=item_exibido,
+                tipos=nomes_dos_tipos(),
+                admin=admin,
+                acao=acao,
+                voltar=url_for(destino),
+            ),
+            codigo,
+        )
+
     if request.method == "POST":
         erros = validar_item(request.form, achado=item["tipo_registro"] == "achado")
+        if not erros:
+            dados = dados_do_item(request.form)
+            tipo_id = tipo_id_por_nome(dados.pop("tipo"))
+            if tipo_id is None:
+                erros = ["Selecione um tipo de objeto válido."]
+            else:
+                dados["tipo_id"] = tipo_id
+                try:
+                    api_cliente.requisitar("PUT", f"/api/itens/{item_id}", json=dados)
+                except (ApiIndisponivel, SessaoExpirada):
+                    raise
+                except ErroApi as erro:
+                    erros = [erro.mensagem]
+
         if erros:
-            for erro in erros:
-                flash(erro, "erro")
-            enviado = {c: request.form.get(c, "") for c in armazenamento.CAMPOS_EDITAVEIS}
-            return (
-                render_template(
-                    "editar_item.html",
-                    item={**item, **enviado},
-                    tipos=nomes_dos_tipos(),
-                    admin=admin,
-                    acao=acao,
-                    voltar=url_for(destino),
-                ),
-                400,
-            )
-        armazenamento.atualizar(item_id, dados_do_item(request.form))
+            for mensagem in erros:
+                flash(mensagem, "erro")
+            campos = ("nome", "tipo", "descricao", "local", "data", "horario")
+            enviado = {c: request.form.get(c, "") for c in campos}
+            return mostrar({**item, **enviado}, 400)
+
         flash("Item atualizado com sucesso!", "sucesso")
         return redirect(url_for(destino))
 
-    return render_template(
-        "editar_item.html",
-        item=item,
-        tipos=nomes_dos_tipos(),
-        admin=admin,
-        acao=acao,
-        voltar=url_for(destino),
-    )
+    return mostrar(item)
 
 
 def _excluir_item(item_id, destino):
-    item, resposta = _item_alteravel_ou_redireciona(item_id, destino)
-    if resposta:
-        return resposta
-    armazenamento.excluir(item_id)
-    flash(f"O item \u201c{item['nome']}\u201d foi excluído.", "sucesso")
+    try:
+        api_cliente.requisitar("DELETE", f"/api/itens/{item_id}")
+    except (ApiIndisponivel, SessaoExpirada):
+        raise
+    except ErroApi as erro:
+        flash(erro.mensagem, "erro")
+    else:
+        flash("Item excluído com sucesso.", "sucesso")
     return redirect(url_for(destino))
-
 
 @app.route("/item/<int:item_id>/editar", methods=["GET", "POST"])
 @login_obrigatorio("usuario")
@@ -413,9 +507,9 @@ def excluir_item(item_id):
 @app.route("/historico")
 @login_obrigatorio("usuario")
 def historico():
-    """Itens registrados pelo usuário e os registros de devolução."""
-    itens = armazenamento.listar_do_usuario(session["usuario_email"])
-    return render_template("historico.html", itens=itens)
+    """Itens registrados pelo usuário."""
+    itens = api_cliente.requisitar("GET", "/api/itens/meus")
+    return render_template("historico.html", itens=[item_do_site(i) for i in itens])
 
 
 # --- Área do administrador --------------------------------------------------
@@ -423,10 +517,8 @@ def historico():
 @login_obrigatorio("admin")
 def admin_painel():
     """Página inicial do administrador."""
-    return render_template(
-        "admin_inicio.html", contagem=armazenamento.contar_por_status()
-    )
-
+    contagem = api_cliente.requisitar("GET", "/api/admin/resumo")
+    return render_template("admin_inicio.html", contagem=contagem)
 
 @app.route("/admin/cadastrar-item-achado", methods=["GET", "POST"])
 @login_obrigatorio("admin")
@@ -453,10 +545,12 @@ def cadastrar_item_achado():
 @login_obrigatorio("admin")
 def admin_historico():
     """Todos os itens perdidos e achados registrados no sistema."""
+    itens = api_cliente.requisitar("GET", "/api/admin/itens")
+    contagem = api_cliente.requisitar("GET", "/api/admin/resumo")
     return render_template(
         "admin_historico.html",
-        itens=armazenamento.listar_todos(),
-        contagem=armazenamento.contar_por_status(),
+        itens=[item_do_site(i) for i in itens],
+        contagem=contagem,
     )
 
 
@@ -476,22 +570,31 @@ def admin_excluir_item(item_id):
 @login_obrigatorio("admin")
 def admin_entregar_item(item_id):
     """Marca como entregue e registra quem retirou o objeto."""
-    item, resposta = _item_alteravel_ou_redireciona(item_id, "admin_historico")
-    if resposta:
-        return resposta
     nome = request.form.get("nome", "").strip()
     email = request.form.get("email", "").strip().lower()
+
     erros = []
     if len(nome) < 3 or len(nome) > 120:
         erros.append("Informe o nome completo de quem retirou o item.")
     if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 120:
         erros.append("Informe um e-mail válido de quem retirou o item.")
     if erros:
-        for erro in erros:
-            flash(erro, "erro")
+        for mensagem in erros:
+            flash(mensagem, "erro")
         return redirect(url_for("admin_historico"))
-    armazenamento.marcar_entregue(item_id, nome, email)
-    flash(f"O item \u201c{item['nome']}\u201d foi marcado como entregue.", "sucesso")
+
+    try:
+        api_cliente.requisitar(
+            "POST",
+            f"/api/admin/itens/{item_id}/entregar",
+            json={"nome": nome, "email": email},
+        )
+    except (ApiIndisponivel, SessaoExpirada):
+        raise
+    except ErroApi as erro:
+        flash(erro.mensagem, "erro")
+    else:
+        flash("O item foi marcado como entregue.", "sucesso")
     return redirect(url_for("admin_historico"))
 
 
@@ -504,26 +607,37 @@ def admin_tipos():
         if not nome or len(nome) > 40:
             flash("Informe o nome do tipo (até 40 caracteres).", "erro")
         else:
-            erro = armazenamento.adicionar_tipo(nome)
-            if erro:
-                flash(erro, "erro")
+            try:
+                api_cliente.requisitar("POST", "/api/tipos", json={"nome": nome})
+            except (ApiIndisponivel, SessaoExpirada):
+                raise
+            except ErroApi as erro:
+                flash(erro.mensagem, "erro")
             else:
                 flash(f"Tipo \u201c{nome}\u201d adicionado.", "sucesso")
         return redirect(url_for("admin_tipos"))
-    return render_template(
-        "admin_tipos.html", uso=armazenamento.contar_por_tipo()
-    )
+
+    tipos = api_cliente.requisitar("GET", "/api/tipos/uso")
+    uso = {t["nome"]: t["quantidade_itens"] for t in tipos}
+    return render_template("admin_tipos.html", uso=uso)
 
 
 @app.route("/admin/tipos/excluir", methods=["POST"])
 @login_obrigatorio("admin")
 def admin_excluir_tipo():
     nome = request.form.get("nome", "")
-    erro = armazenamento.remover_tipo(nome)
-    if erro:
-        flash(erro, "erro")
+    tipo_id = tipo_id_por_nome(nome)
+    if tipo_id is None:
+        flash("Tipo de objeto não encontrado.", "erro")
     else:
-        flash(f"Tipo \u201c{nome}\u201d excluído.", "sucesso")
+        try:
+            api_cliente.requisitar("DELETE", f"/api/tipos/{tipo_id}")
+        except (ApiIndisponivel, SessaoExpirada):
+            raise
+        except ErroApi as erro:
+            flash(erro.mensagem, "erro")
+        else:
+            flash(f"Tipo \u201c{nome}\u201d excluído.", "sucesso")
     return redirect(url_for("admin_tipos"))
 
 

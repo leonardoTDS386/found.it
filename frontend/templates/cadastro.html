@@ -1,20 +1,15 @@
-{% extends "base.html" %}
-{% from "_marca.html" import painel_marca %}
-
-{% block title %}Criar conta | Found.it - Sistema de achados e perdidos{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% from "_marca.html" import painel_marca %} {% from
+"_mensagens.html" import mensagens %} {% block title %}Criar conta | Found.it -
+Sistema de achados e perdidos{% endblock %} {% block content %} {{ mensagens()
+}}
 <main class="auth-page auth-page-compact">
-
     <!-- Painel da marca (compartilhado, veja _marca.html) -->
     {{ painel_marca() }}
 
     <!-- Formulário de cadastro -->
     <section class="auth-form-side">
         <div class="auth-card auth-card-wide">
-
-            <img src="{{ url_for('static', filename='img/logo-icon.png') }}"
-                 alt="" class="auth-card-icon d-lg-none">
+            <img src="{{ url_for('static', filename='img/logo-icon.png') }}" alt="" class="auth-card-icon d-lg-none" />
 
             <p class="auth-eyebrow">Found.it - Sistema de achados e perdidos</p>
             <h2 class="auth-title">Criar sua conta</h2>
@@ -23,15 +18,15 @@
             <!-- Área de avisos (sucesso do cadastro) -->
             <div id="cadastro-alert" class="alert d-none" role="alert"></div>
 
-            <form id="cadastro-form" novalidate>
+            <form id="cadastro-form" method="POST" action="{{ url_for('cadastro') }}" novalidate>
                 <div class="row g-3">
-
                     <div class="col-md-6">
                         <label for="nome" class="form-label">Nome completo</label>
                         <div class="input-group has-validation">
                             <span class="input-group-text"><i class="bi bi-person"></i></span>
                             <input type="text" class="form-control" id="nome" name="nome"
-                                   placeholder="Seu nome e sobrenome" autocomplete="name" required>
+                                value="{{ valores.get('nome', '') }}" placeholder="Seu nome e sobrenome"
+                                autocomplete="name" required />
                             <div class="invalid-feedback">Informe nome e sobrenome.</div>
                         </div>
                     </div>
@@ -41,7 +36,8 @@
                         <div class="input-group has-validation">
                             <span class="input-group-text"><i class="bi bi-envelope"></i></span>
                             <input type="email" class="form-control" id="email" name="email"
-                                   placeholder="voce@exemplo.com" autocomplete="email" required>
+                                value="{{ valores.get('email', '') }}" placeholder="voce@exemplo.com"
+                                autocomplete="email" required />
                             <div class="invalid-feedback">Informe um e-mail válido.</div>
                         </div>
                     </div>
@@ -51,8 +47,8 @@
                         <div class="input-group has-validation">
                             <span class="input-group-text"><i class="bi bi-person-vcard"></i></span>
                             <input type="text" class="form-control" id="cpf" name="cpf"
-                                   placeholder="000.000.000-00" inputmode="numeric"
-                                   maxlength="14" autocomplete="off" required>
+                                value="{{ valores.get('cpf', '') }}" placeholder="000.000.000-00" inputmode="numeric"
+                                maxlength="14" autocomplete="off" required />
                             <div class="invalid-feedback">Informe um CPF válido.</div>
                         </div>
                     </div>
@@ -62,9 +58,11 @@
                         <div class="input-group has-validation">
                             <span class="input-group-text"><i class="bi bi-telephone"></i></span>
                             <input type="tel" class="form-control" id="telefone" name="telefone"
-                                   placeholder="(00) 00000-0000" inputmode="numeric"
-                                   maxlength="15" autocomplete="tel" required>
-                            <div class="invalid-feedback">Informe um telefone válido com DDD.</div>
+                                value="{{ valores.get('telefone', '') }}" placeholder="(00) 00000-0000"
+                                inputmode="numeric" maxlength="15" autocomplete="tel" required />
+                            <div class="invalid-feedback">
+                                Informe um telefone válido com DDD.
+                            </div>
                         </div>
                     </div>
 
@@ -73,25 +71,25 @@
                         <div class="input-group has-validation">
                             <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
                             <input type="text" class="form-control" id="endereco" name="endereco"
-                                   placeholder="Rua, número, bairro e cidade"
-                                   autocomplete="street-address" minlength="10" required>
+                                value="{{ valores.get('endereco', '') }}" placeholder="Rua, número, bairro e cidade"
+                                autocomplete="street-address" minlength="10" required />
                             <div class="invalid-feedback">Informe o endereço completo.</div>
                         </div>
                     </div>
 
-                    <div class="col-md-6">
+                                        <div class="col-md-6">
                         <label for="senha" class="form-label">Senha</label>
                         <div class="input-group has-validation">
                             <span class="input-group-text"><i class="bi bi-lock"></i></span>
                             <input type="password" class="form-control" id="senha" name="senha"
-                                   placeholder="Mínimo de 6 caracteres" autocomplete="new-password"
-                                   minlength="6" required>
-                            <button class="btn btn-toggle-senha" type="button"
-                                    data-toggle-senha="senha"
-                                    aria-label="Mostrar ou ocultar senha">
+                                placeholder="Mínimo de 8 caracteres, com letras e números" autocomplete="new-password"
+                                minlength="8" required>
+                            <button class="btn btn-toggle-senha" type="button" data-toggle-senha="senha"
+                                aria-label="Mostrar ou ocultar senha">
                                 <i class="bi bi-eye"></i>
                             </button>
-                            <div class="invalid-feedback">A senha deve ter pelo menos 6 caracteres.</div>
+                            <div class="invalid-feedback">A senha deve ter pelo menos 8 caracteres, com letras e
+                                números.</div>
                         </div>
 
                         <!-- Indicador de força da senha -->
@@ -110,81 +108,83 @@
                         <div class="input-group has-validation">
                             <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
                             <input type="password" class="form-control" id="senha2" name="senha2"
-                                   placeholder="Digite a senha novamente" autocomplete="new-password"
-                                   required>
-                            <button class="btn btn-toggle-senha" type="button"
-                                    data-toggle-senha="senha2"
-                                    aria-label="Mostrar ou ocultar senha">
+                                placeholder="Digite a senha novamente" autocomplete="new-password" required />
+                            <button class="btn btn-toggle-senha" type="button" data-toggle-senha="senha2"
+                                aria-label="Mostrar ou ocultar senha">
                                 <i class="bi bi-eye"></i>
                             </button>
                             <div class="invalid-feedback">As senhas não coincidem.</div>
                         </div>
                     </div>
-
                 </div>
 
-                <p class="form-note">
-                    <i class="bi bi-shield-lock"></i>
-                    CPF e endereço são solicitados por segurança: permitem ao
-                    administrador identificar quem retira um item.
-                </p>
+        <p class="form-note">
+            <i class="bi bi-shield-lock"></i>
+            CPF e endereço são solicitados por segurança: permitem ao
+            administrador identificar quem retira um item.
+        </p>
 
-                <div class="form-check form-check-consent">
-                    <input class="form-check-input" type="checkbox" id="consentimento"
-                           name="consentimento" required>
-                    <label class="form-check-label" for="consentimento">
-                        Autorizo o uso dos meus dados pessoais para identificação na
-                        devolução de itens, conforme a Lei Geral de Proteção de Dados (LGPD).
-                    </label>
-                    <div class="invalid-feedback">É necessário autorizar para criar a conta.</div>
-                </div>
+        <div class="form-check form-check-consent">
+            <input class="form-check-input" type="checkbox" id="consentimento" name="consentimento" {{ 'checked' if
+                valores.get('consentimento') }} required>
+            <label class="form-check-label" for="consentimento">
+                Autorizo o uso dos meus dados pessoais para identificação na
+                devolução de itens, conforme a Lei Geral de Proteção de Dados
+                (LGPD).
+            </label>
+            <div class="invalid-feedback">
+                É necessário autorizar para criar a conta.
+            </div>
+        </div>
 
-                <div class="row g-2 mt-1">
-                    <div class="col-sm-6 order-sm-2">
-                        <button type="submit" class="btn btn-primary btn-lg w-100">Cadastrar</button>
-                    </div>
-                    <div class="col-sm-6 order-sm-1">
-                        <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg w-100">
-                            Voltar ao Login
-                        </a>
-                    </div>
-                </div>
-            </form>
+        <div class="row g-2 mt-1">
+            <div class="col-sm-6 order-sm-2">
+                <button type="submit" class="btn btn-primary btn-lg w-100">
+                    Cadastrar
+                </button>
+            </div>
+            <div class="col-sm-6 order-sm-1">
+                <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg w-100">
+                    Voltar ao Login
+                </a>
+            </div>
+        </div>
+        </form>
         </div>
     </section>
-
 </main>
-{% endblock %}
-
-{% block scripts %}
+{% endblock %} {% block scripts %}
 <script>
     (function () {
         const LOGIN_URL = "{{ url_for('login') }}";
 
-        const form = document.getElementById('cadastro-form');
-        const alertBox = document.getElementById('cadastro-alert');
-        const nome = document.getElementById('nome');
-        const cpf = document.getElementById('cpf');
-        const telefone = document.getElementById('telefone');
-        const senha = document.getElementById('senha');
-        const senha2 = document.getElementById('senha2');
+        const form = document.getElementById("cadastro-form");
+        const alertBox = document.getElementById("cadastro-alert");
+        const nome = document.getElementById("nome");
+        const cpf = document.getElementById("cpf");
+        const telefone = document.getElementById("telefone");
+        const senha = document.getElementById("senha");
+        const senha2 = document.getElementById("senha2");
 
         // ---------- Utilitários ----------
-        const soDigitos = (v) => v.replace(/\D/g, '');
+        const soDigitos = (v) => v.replace(/\D/g, "");
 
         function mascaraCpf(v) {
-            return soDigitos(v).slice(0, 11)
-                .replace(/(\d{3})(\d)/, '$1.$2')
-                .replace(/(\d{3})(\d)/, '$1.$2')
-                .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            return soDigitos(v)
+                .slice(0, 11)
+                .replace(/(\d{3})(\d)/, "$1.$2")
+                .replace(/(\d{3})(\d)/, "$1.$2")
+                .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
         }
 
         function mascaraTelefone(v) {
             const d = soDigitos(v).slice(0, 11);
-            if (d.length > 10) return d.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
-            if (d.length > 6) return d.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
-            if (d.length > 2) return d.replace(/(\d{2})(\d{0,5})/, '($1) $2');
-            return d ? '(' + d : '';
+            if (d.length > 10)
+                return d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
+            if (d.length > 6)
+                return d.replace(/(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
+            if (d.length > 2) return d.replace(/(\d{2})(\d{0,5})/, "($1) $2");
+            return d ? "(" + d : "";
         }
 
         // Valida o CPF pelos dois dígitos verificadores
@@ -203,42 +203,56 @@
         // ---------- Validações personalizadas ----------
         function validaNome() {
             const partes = nome.value.trim().split(/\s+/).filter(Boolean);
-            nome.setCustomValidity(partes.length >= 2 ? '' : 'Informe nome e sobrenome.');
+            nome.setCustomValidity(
+                partes.length >= 2 ? "" : "Informe nome e sobrenome.",
+            );
         }
 
         function validaCpf() {
-            cpf.setCustomValidity(cpfValido(cpf.value) ? '' : 'CPF inválido.');
+            cpf.setCustomValidity(cpfValido(cpf.value) ? "" : "CPF inválido.");
         }
 
         function validaTelefone() {
             const tam = soDigitos(telefone.value).length;
-            telefone.setCustomValidity(tam === 10 || tam === 11 ? '' : 'Telefone inválido.');
+            telefone.setCustomValidity(
+                tam === 10 || tam === 11 ? "" : "Telefone inválido.",
+            );
         }
 
         function validaConfirmacao() {
-            senha2.setCustomValidity(senha2.value === senha.value ? '' : 'As senhas não coincidem.');
+            senha2.setCustomValidity(
+                senha2.value === senha.value ? "" : "As senhas não coincidem.",
+            );
         }
 
-        nome.addEventListener('input', validaNome);
-        cpf.addEventListener('input', function () {
+        function validaSenha() {
+            const forte = senha.value.length >= 8
+                && /[A-Za-z]/.test(senha.value)
+                && /\d/.test(senha.value);
+            senha.setCustomValidity(forte ? '' : 'A senha deve ter pelo menos 8 caracteres, com letras e números.');
+        }
+
+        nome.addEventListener("input", validaNome);
+        cpf.addEventListener("input", function () {
             cpf.value = mascaraCpf(cpf.value);
             validaCpf();
         });
-        telefone.addEventListener('input', function () {
+        telefone.addEventListener("input", function () {
             telefone.value = mascaraTelefone(telefone.value);
             validaTelefone();
         });
-        senha.addEventListener('input', validaConfirmacao);
-        senha2.addEventListener('input', validaConfirmacao);
+        senha.addEventListener("input", validaConfirmacao);
+        senha2.addEventListener("input", validaConfirmacao);
+        senha.addEventListener('input', validaSenha);
 
         // ---------- Indicador de força da senha ----------
-        const forca = document.getElementById('senha-forca');
-        const forcaTexto = document.getElementById('senha-forca-texto');
+        const forca = document.getElementById("senha-forca");
+        const forcaTexto = document.getElementById("senha-forca-texto");
 
         // nível 0 = vazio, 1 = fraca, 2 = média, 3 = forte
         function avaliaSenha(v) {
-            if (!v) return { nivel: 0, texto: '' };
-            if (v.length < 6) return { nivel: 1, texto: 'Muito curta' };
+            if (!v) return { nivel: 0, texto: "" };
+            if (v.length < 8) return { nivel: 1, texto: "Muito curta" };
 
             let pontos = 0;
             if (v.length >= 8) pontos++;
@@ -246,49 +260,49 @@
             if (/\d/.test(v)) pontos++;
             if (/[^A-Za-z0-9]/.test(v)) pontos++;
 
-            if (pontos <= 1) return { nivel: 1, texto: 'Fraca' };
-            if (pontos <= 3) return { nivel: 2, texto: 'Média' };
-            return { nivel: 3, texto: 'Forte' };
+            if (pontos <= 1) return { nivel: 1, texto: "Fraca" };
+            if (pontos <= 3) return { nivel: 2, texto: "Média" };
+            return { nivel: 3, texto: "Forte" };
         }
 
-        senha.addEventListener('input', function () {
+        senha.addEventListener("input", function () {
             const r = avaliaSenha(senha.value);
             forca.dataset.nivel = r.nivel;
             forcaTexto.textContent = r.texto;
         });
 
-        [validaNome, validaCpf, validaTelefone, validaConfirmacao].forEach((f) => f());
+        [validaNome, validaCpf, validaTelefone, validaSenha, validaConfirmacao].forEach((f) => f());
 
         // ---------- Mostrar / ocultar senha ----------
-        document.querySelectorAll('[data-toggle-senha]').forEach(function (botao) {
-            botao.addEventListener('click', function () {
+        document.querySelectorAll("[data-toggle-senha]").forEach(function (botao) {
+            botao.addEventListener("click", function () {
                 const campo = document.getElementById(botao.dataset.toggleSenha);
-                const mostrando = campo.type === 'text';
-                campo.type = mostrando ? 'password' : 'text';
-                botao.querySelector('i').className = mostrando ? 'bi bi-eye' : 'bi bi-eye-slash';
+                const mostrando = campo.type === "text";
+                campo.type = mostrando ? "password" : "text";
+                botao.querySelector("i").className = mostrando
+                    ? "bi bi-eye"
+                    : "bi bi-eye-slash";
             });
         });
 
         // ---------- Envio ----------
         form.addEventListener('submit', function (event) {
-            event.preventDefault();
             alertBox.classList.add('d-none');
 
             if (!form.checkValidity()) {
+                event.preventDefault();
                 form.classList.add('was-validated');
                 const primeiroInvalido = form.querySelector(':invalid');
                 if (primeiroInvalido) primeiroInvalido.focus();
                 return;
             }
 
-            // TODO: enviar os dados para a API REST quando o back-end estiver pronto.
-            form.querySelectorAll('input, button').forEach((el) => { el.disabled = true; });
-            alertBox.className = 'alert alert-success';
-            alertBox.textContent = 'Cadastro realizado com sucesso! Você será redirecionado para o login...';
-            alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-            setTimeout(function () { window.location.href = LOGIN_URL; }, 2500);
+            // Tudo válido: o navegador envia o formulário ao servidor (POST /cadastro).
+            // Só o botão é desativado (campos desativados não seriam enviados).
+            const botao = form.querySelector('button[type="submit"]');
+            botao.disabled = true;
+            botao.textContent = 'Cadastrando...';
         });
-    })();
+  }) ();
 </script>
 {% endblock %}
