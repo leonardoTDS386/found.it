@@ -6,10 +6,10 @@ O link do Google Maps é gerado automaticamente a partir do endereço.
 from urllib.parse import quote_plus
 
 RETIRADA = {
-    "empresa": "Empresa Exemplo Ltda.",
+    "empresa": "IFPI - Instituto Federal do Piauí",
     "setor": "Recepção, térreo - Sala 01",
-    "endereco": "Av. Exemplo, 1000, Centro, Teresina - PI",
-    "horario": "Segunda a sexta, das 8h às 17h",
+    "endereco": "R. Quintino Bocaiúva, 141, Centro, Teresina - PI",
+    "horario": "Segunda a sexta, das 8h às 21h",
     "orientacoes": "Leve um documento com foto. O CPF deve ser o mesmo do seu cadastro.",
 }
 
