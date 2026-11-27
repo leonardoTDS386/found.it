@@ -1386,3 +1386,97 @@ a.stat-tile:focus-visible {
     box-shadow: 0 8px 20px rgba(15, 76, 92, 0.12);
     outline: none;
 }
+
+
+/* Quadro de retirada (solicitação de devolução) */
+.retirada-box {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #eaf6f1;
+  border: 1px solid #2e9e6b;
+  border-left-width: 4px;
+  border-radius: 0.5rem;
+}
+.retirada-titulo {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: #1f7a53;
+}
+.retirada-lista {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+.retirada-lista li {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+.retirada-lista i {
+  margin-top: 0.15rem;
+  color: var(--fi-primary);
+}
+.retirada-lista small {
+  display: block;
+  color: #5b6b70;
+}
+
+/* Solicitações de devolução (administrador) */
+.badge-solicitado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  width: fit-content;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #8a5a00;
+  background: #fff1d6;
+  border: 1px solid #f59e0b;
+  border-radius: 999px;
+}
+
+.solicitantes-lista {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.solicitantes-lista li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.solicitantes-lista small {
+  display: block;
+  color: #5b6b70;
+}
+
+/* Quadro "Solicitações" da página inicial: 4 quadros por linha */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (max-width: 991.98px) {
+  .stats-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 575.98px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+}
+.stat-tile.solicitado .stat-icone {
+  color: #8a5a00;
+  background: #fff1d6;
+}
+.stat-tile.solicitado.destaque {
+  background: #fff7e6;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+}

@@ -9,6 +9,7 @@ import os
 import re
 from datetime import date, datetime
 from functools import wraps
+from retirada import dados_da_retirada
 
 from flask import (
     Flask,
@@ -404,6 +405,51 @@ def api_itens():
         return jsonify({"erro": "Faça login para buscar itens."}), 401
     itens = api_cliente.requisitar("GET", "/api/itens")
     return jsonify([item_do_site(i) for i in itens])
+
+
+@app.route("/api/solicitar/<int:item_id>", methods=["POST"])
+@login_obrigatorio("usuario")
+def api_solicitar(item_id):
+    """Registra a solicitação de devolução e devolve os dados de retirada."""
+    try:
+        item = api_cliente.requisitar("POST", f"/api/itens/{item_id}/solicitar")
+    except ErroApi as erro:
+        return jsonify({"erro": erro.mensagem}), erro.status
+    return jsonify({"item": item_do_site(item), "retirada": dados_da_retirada()})
+
+
+@app.route("/api/solicitar/<int:item_id>", methods=["DELETE"])
+@login_obrigatorio("usuario")
+def api_cancelar_solicitacao(item_id):
+    """O usuário cancela a própria solicitação."""
+    try:
+        api_cliente.requisitar("DELETE", f"/api/itens/{item_id}/solicitar")
+    except ErroApi as erro:
+        return jsonify({"erro": erro.mensagem}), erro.status
+    return jsonify({"ok": True})
+
+
+@app.route("/api/minhas-solicitacoes")
+@login_obrigatorio("usuario")
+def api_minhas_solicitacoes():
+    """Itens que o usuário já solicitou, para a busca marcar o botão."""
+    itens = api_cliente.requisitar("GET", "/api/itens/solicitacoes/minhas")
+    return jsonify(
+        {"ids": [i["id"] for i in itens], "retirada": dados_da_retirada()}
+    )
+
+
+@app.route("/api/admin/itens/<int:item_id>/solicitacoes/<int:usuario_id>", methods=["DELETE"])
+@login_obrigatorio("admin")
+def api_recusar_solicitacao(item_id, usuario_id):
+    """O administrador recusa (remove) a solicitação de um usuário."""
+    try:
+        api_cliente.requisitar(
+            "DELETE", f"/api/admin/itens/{item_id}/solicitacoes/{usuario_id}"
+        )
+    except ErroApi as erro:
+        return jsonify({"erro": erro.mensagem}), erro.status
+    return jsonify({"ok": True})
 
 
 @app.route("/cadastrar-item-perdido", methods=["GET", "POST"])

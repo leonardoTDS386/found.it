@@ -9,6 +9,7 @@
 {% macro registro(item) %}
 <button type="button" class="item-card historico-card" data-id="{{ item.id }}"
         data-status="{{ item.status }}"
+        data-solicitado="{{ 'sim' if item.status == 'achado' and item.solicitacoes else 'nao' }}"
         aria-label="{{ item.nome }} - ver detalhes">
     <span class="item-card-icon"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
     <span class="item-card-body">
@@ -16,6 +17,9 @@
         <span class="item-card-meta"><i class="bi bi-grid" aria-hidden="true"></i><span>{{ item.tipo }}</span></span>
         <span class="item-card-meta"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>{{ item.local }}</span></span>
         <span class="item-card-meta"><i class="bi bi-calendar-event" aria-hidden="true"></i><span>Registrado em {{ item.data_registro|data_br }}</span></span>
+        {% if item.status == 'achado' and item.solicitacoes %}
+        <span class="badge-solicitado"><i class="bi bi-bell-fill" aria-hidden="true"></i> Solicitado</span>
+        {% endif %}
     </span>
     <span class="badge badge-status {{ item.status }}">{{ item.status|rotulo_status }}</span>
     <i class="bi bi-chevron-right item-card-seta" aria-hidden="true"></i>
@@ -68,9 +72,12 @@
                     <dt class="grupo-entregue">Data da devolução</dt>
                     <dd class="grupo-entregue" id="modal-devolucao"></dd>
 
-                    {% if admin %}
+                                        {% if admin %}
                     <dt class="grupo-entregue">Retirado por</dt>
                     <dd class="grupo-entregue" id="modal-retirado"></dd>
+
+                    <dt id="modal-solicitacoes-rotulo" hidden>Solicitado por</dt>
+                    <dd id="modal-solicitacoes" hidden></dd>
                     {% endif %}
                 </dl>
 

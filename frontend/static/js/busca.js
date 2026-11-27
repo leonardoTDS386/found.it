@@ -21,6 +21,7 @@
   const avisoModal = document.getElementById("modal-aviso");
 
   let itensEncontrados = [];
+  let itemAberto = null;
 
   // A data da busca não pode ser no futuro (usa o dia local do usuário).
   campoData.max = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
@@ -204,8 +205,9 @@
       formataData(item.data) + " às " + item.horario;
 
     // Só itens achados podem ter a devolução solicitada.
-    botaoSolicitar.classList.toggle("d-none", !achado);
+    itemAberto = item;
     avisoModal.classList.add("d-none");
+    atualizarSolicitacao(item, achado);
 
     modal.show();
   }
@@ -215,13 +217,140 @@
     if (cartao) abrirDetalhes(cartao.dataset.id);
   });
 
-  // Ainda não foi decidido como a solicitação será feita (fica para o back-end).
-  botaoSolicitar.addEventListener("click", function () {
-    avisoModal.textContent =
-      "A solicitação de devolução será habilitada quando o back-end " +
-      "estiver conectado.";
+  // ---------- Solicitação de devolução ----------
+  const URL_SOLICITAR = "/api/solicitar/";
+  const URL_MINHAS = "/api/minhas-solicitacoes";
+
+  const idsSolicitados = new Set(); // itens que este usuário já solicitou
+  let dadosRetirada = null; // vem do servidor (arquivo retirada.py)
+
+  // Botão "Cancelar solicitação", criado ao lado do botão de solicitar.
+  const botaoCancelar = criar("button", "btn btn-outline-danger d-none");
+  botaoCancelar.type = "button";
+  botaoCancelar.appendChild(icone("bi-x-circle"));
+  botaoCancelar.appendChild(document.createTextNode(" Cancelar solicitação"));
+  botaoSolicitar.after(botaoCancelar);
+
+  // Quadro com as instruções de retirada, logo abaixo do aviso do balão.
+  const quadroRetirada = criar("div", "retirada-box d-none");
+  avisoModal.after(quadroRetirada);
+
+  function linhaRetirada(nomeIcone, rotulo, valor, negrito) {
+    const li = criar("li");
+    li.appendChild(icone(nomeIcone));
+    const texto = criar("div");
+    texto.appendChild(criar("small", null, rotulo));
+    texto.appendChild(criar(negrito ? "strong" : "span", null, valor));
+    li.appendChild(texto);
+    return li;
+  }
+
+  function montarQuadro(item) {
+    const r = dadosRetirada;
+    const lista = criar("ul", "retirada-lista");
+    lista.appendChild(linhaRetirada("bi-box-seam", "Item", item.nome, true));
+    lista.appendChild(
+      linhaRetirada("bi-geo-alt", "Local", r.empresa + " - " + r.setor),
+    );
+    lista.appendChild(linhaRetirada("bi-clock", "Horário", r.horario));
+    lista.appendChild(linhaRetirada("bi-person-vcard", "Leve", r.orientacoes));
+
+    const mapa = criar("a", "btn btn-sm btn-outline-primary");
+    mapa.href = r.mapa;
+    mapa.target = "_blank";
+    mapa.rel = "noopener noreferrer";
+    mapa.appendChild(icone("bi-map"));
+    mapa.appendChild(document.createTextNode(" Ver no Google Maps"));
+
+    quadroRetirada.replaceChildren(
+      criar(
+        "strong",
+        "retirada-titulo",
+        "Solicitação registrada! Veja como retirar este item.",
+      ),
+      lista,
+      mapa,
+    );
+  }
+
+  // Mostra o botão certo e o quadro, conforme o estado do item aberto.
+  function atualizarSolicitacao(item, achado) {
+    const pedido = achado && idsSolicitados.has(item.id);
+    botaoSolicitar.classList.toggle("d-none", !achado || pedido);
+    botaoCancelar.classList.toggle("d-none", !pedido);
+
+    const mostrarQuadro = pedido && dadosRetirada;
+    if (mostrarQuadro) montarQuadro(item);
+    quadroRetirada.classList.toggle("d-none", !mostrarQuadro);
+  }
+
+  // Chamada ao servidor do site. Devolve o JSON ou lança um erro com mensagem.
+  async function chamar(metodo, id) {
+    const resposta = await fetch(URL_SOLICITAR + id, { method: metodo });
+    let corpo = null;
+    try {
+      corpo = await resposta.json();
+    } catch (e) {
+      /* resposta sem JSON */
+    }
+    if (!resposta.ok) {
+      throw new Error(
+        (corpo && corpo.erro) || "Não foi possível concluir. Tente novamente.",
+      );
+    }
+    return corpo;
+  }
+
+  function mostrarAvisoModal(mensagem) {
+    avisoModal.textContent = mensagem;
     avisoModal.classList.remove("d-none");
+  }
+
+  botaoSolicitar.addEventListener("click", async function () {
+    if (!itemAberto) return;
+    botaoSolicitar.disabled = true;
+    avisoModal.classList.add("d-none");
+    try {
+      const corpo = await chamar("POST", itemAberto.id);
+      dadosRetirada = corpo.retirada;
+      idsSolicitados.add(itemAberto.id);
+      atualizarSolicitacao(itemAberto, true);
+    } catch (erro) {
+      mostrarAvisoModal(erro.message);
+    } finally {
+      botaoSolicitar.disabled = false;
+    }
   });
+
+  botaoCancelar.addEventListener("click", async function () {
+    if (!itemAberto) return;
+    botaoCancelar.disabled = true;
+    avisoModal.classList.add("d-none");
+    try {
+      await chamar("DELETE", itemAberto.id);
+      idsSolicitados.delete(itemAberto.id);
+      atualizarSolicitacao(itemAberto, true);
+    } catch (erro) {
+      mostrarAvisoModal(erro.message);
+    } finally {
+      botaoCancelar.disabled = false;
+    }
+  });
+
+  // Ao abrir a página, descobre quais itens o usuário já solicitou.
+  (async function carregarSolicitacoes() {
+    try {
+      const resposta = await fetch(URL_MINHAS);
+      if (!resposta.ok) return;
+      const dados = await resposta.json();
+      dados.ids.forEach(function (id) {
+        idsSolicitados.add(id);
+      });
+      dadosRetirada = dados.retirada;
+    } catch (e) {
+      /* sem as solicitações antigas, a busca continua funcionando */
+    }
+  })();
 
   // ---------- Envio da busca ----------
   form.addEventListener("submit", async function (evento) {

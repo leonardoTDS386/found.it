@@ -40,6 +40,14 @@
                     <span>Entregues</span>
                 </div>
             </a>
+                        <a class="stat-tile solicitado {{ 'destaque' if contagem.solicitados > 0 }}"
+               href="{{ url_for('admin_historico', status='solicitado') }}">
+                <span class="stat-icone"><i class="bi bi-bell" aria-hidden="true"></i></span>
+                <div>
+                    <strong>{{ contagem.solicitados }}</strong>
+                    <span>Solicitações</span>
+                </div>
+            </a>
         </section>
 
         <section class="acoes">

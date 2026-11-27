@@ -21,10 +21,17 @@
   const contador = document.getElementById("historico-contador");
   const vazio = document.getElementById("historico-filtro-vazio");
 
+  let filtroAtual = "todos";
+
   function aplicar(filtro) {
     let visiveis = 0;
+    filtroAtual = filtro;
     registros.forEach(function (registro) {
-      const mostrar = filtro === "todos" || registro.dataset.status === filtro;
+            const mostrar =
+        filtro === "todos" ||
+        (filtro === "solicitado"
+          ? registro.dataset.solicitado === "sim"
+          : registro.dataset.status === filtro);
       registro.hidden = !mostrar;
       if (mostrar) visiveis += 1;
     });
@@ -46,7 +53,7 @@
 
     // Vindo dos containers da página inicial: /admin/historico?status=achado
     const pedido = new URLSearchParams(window.location.search).get("status");
-    if (pedido && ["perdido", "achado", "entregue"].includes(pedido)) {
+    if (pedido && ["perdido", "achado", "entregue", "solicitado"].includes(pedido)) {
       aplicar(pedido);
     }
   }
@@ -67,6 +74,110 @@
   const paineis = [painelEntregar, painelExcluir].filter(Boolean);
 
   const urlDe = (modelo, id) => modelo.replace("/0/", "/" + id + "/");
+
+    // ---------- Solicitações de devolução (só no balão do administrador) ----------
+  const URL_ITENS_ADMIN = "/api/admin/itens/";
+  const caixaSolicitacoes = $("modal-solicitacoes");
+  const rotuloSolicitacoes = $("modal-solicitacoes-rotulo");
+  let itemAberto = null;
+
+  // Lista quem pediu o item, cada um com um botão "Recusar".
+  function mostrarSolicitantes(item) {
+    if (!caixaSolicitacoes) return;
+    const lista = item.status === "achado" ? item.solicitacoes || [] : [];
+    rotuloSolicitacoes.hidden = lista.length === 0;
+    caixaSolicitacoes.hidden = lista.length === 0;
+    caixaSolicitacoes.replaceChildren();
+
+    const ul = document.createElement("ul");
+    ul.className = "solicitantes-lista";
+    lista.forEach(function (s) {
+      const li = document.createElement("li");
+
+      const info = document.createElement("div");
+      const nome = document.createElement("strong");
+      nome.textContent = s.usuario.nome;
+      const detalhe = document.createElement("small");
+      detalhe.textContent = s.usuario.email + " · " + formataData(s.criada_em);
+      info.append(nome, detalhe);
+
+      const botao = document.createElement("button");
+      botao.type = "button";
+      botao.className = "btn btn-outline-danger btn-sm";
+      botao.dataset.usuario = s.usuario_id;
+      botao.textContent = "Recusar";
+
+      li.append(info, botao);
+      ul.appendChild(li);
+    });
+
+    const erro = document.createElement("p");
+    erro.className = "solicitacao-erro text-danger small mb-0 mt-2";
+    erro.hidden = true;
+
+    caixaSolicitacoes.append(ul, erro);
+  }
+
+  // Depois de recusar: tira o selo do cartão e acerta o número do filtro.
+  function atualizarMarcas(item) {
+    const cartao = document.querySelector(
+      '.historico-card[data-id="' + item.id + '"]',
+    );
+    if (cartao && item.solicitacoes.length === 0) {
+      cartao.dataset.solicitado = "nao";
+      const selo = cartao.querySelector(".badge-solicitado");
+      if (selo) selo.remove();
+    }
+
+    const total = itens.filter(function (i) {
+      return i.status === "achado" && i.solicitacoes && i.solicitacoes.length;
+    }).length;
+    const numero = document.querySelector('[data-filtro="solicitado"] span');
+    if (numero) numero.textContent = total;
+
+    if (botoes.length && contador) aplicar(filtroAtual);
+  }
+
+  if (caixaSolicitacoes) {
+    caixaSolicitacoes.addEventListener("click", async function (evento) {
+      const botao = evento.target.closest("button[data-usuario]");
+      if (!botao || !itemAberto) return;
+
+      const erro = caixaSolicitacoes.querySelector(".solicitacao-erro");
+      erro.hidden = true;
+      botao.disabled = true;
+
+      try {
+        const resposta = await fetch(
+          URL_ITENS_ADMIN +
+            itemAberto.id +
+            "/solicitacoes/" +
+            botao.dataset.usuario,
+          { method: "DELETE" },
+        );
+        if (!resposta.ok) {
+          let corpo = null;
+          try {
+            corpo = await resposta.json();
+          } catch (e) {
+            /* resposta sem JSON */
+          }
+          throw new Error(
+            (corpo && corpo.erro) || "Não foi possível recusar agora.",
+          );
+        }
+        itemAberto.solicitacoes = itemAberto.solicitacoes.filter(function (s) {
+          return String(s.usuario_id) !== botao.dataset.usuario;
+        });
+        mostrarSolicitantes(itemAberto);
+        atualizarMarcas(itemAberto);
+      } catch (e) {
+        erro.textContent = e.message;
+        erro.hidden = false;
+        botao.disabled = false;
+      }
+    });
+  }
 
   function fecharPaineis() {
     paineis.forEach(function (p) {
@@ -116,6 +227,9 @@
         ? item.retirado_por_nome + " (" + item.retirado_por_email + ")"
         : "—";
     }
+    
+    itemAberto = item;
+    mostrarSolicitantes(item);
 
     // Data da devolução e quem retirou só fazem sentido para itens entregues.
     modalEl.querySelectorAll(".grupo-entregue").forEach(function (el) {
