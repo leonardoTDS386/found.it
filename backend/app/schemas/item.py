@@ -66,8 +66,21 @@ class ItemResponse(ItemPublico):
     data_devolucao: date | None = None
 
 
+class UsuarioResumo(SQLModel):
+    nome: str
+    email: str
+
+
+class SolicitacaoResponse(SQLModel):
+    """Quem pediu a retirada do item(só o administrador vê)"""
+    criada_em: date
+    usuario_id: int
+    usuario: UsuarioResumo
+
+
 class ItemAdminResponse(ItemResponse):
     """Visão do administrador: inclui quem registrou e quem retirou."""
     registrado_por_id: int
     retirado_por_nome: str | None = None
     retirado_por_email: str | None = None
+    solicitacoes: list[SolicitacaoResponse] = []

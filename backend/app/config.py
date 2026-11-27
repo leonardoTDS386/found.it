@@ -14,5 +14,5 @@ CHAVE_JWT = os.environ.get("FOUNDIT_JWT_SECRET", "chave-provisoria-de desenvolvi
 ALGORITMO_JWT = "HS256"
 
 # Duração dos tokens
-DURACAO_TOKEN_ACESSO = timedelta(seconds=20)
+DURACAO_TOKEN_ACESSO = timedelta(minutes=15)
 DURACAO_TOKEN_REFRESH = timedelta(days=7)

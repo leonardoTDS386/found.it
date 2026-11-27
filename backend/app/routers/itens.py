@@ -8,8 +8,9 @@ from sqlmodel import Session, col, select
 
 from app.database import get_session
 from app.dependencies import usuario_atual
-from app.models import Item, Perfil, StatusItem, Tipo, TipoRegistro, Usuario
+from app.models import Item, Perfil, SolicitacaoDevolucao, StatusItem, Tipo, TipoRegistro, Usuario
 from app.schemas.item import ItemCreate, ItemPublico, ItemResponse, ItemUpdate
+
 
 router = APIRouter(prefix="/api/itens", tags=["Itens"])
 
@@ -152,4 +153,76 @@ def excluir_item(
     item = obter_item_ou_404(item_id, session)
     verificar_permissao_de_alteracao(item, usuario)
     session.delete(item)
+    session.commit()
+
+
+@router.post("/{item_id}/solicitar", response_model=ItemPublico)
+def solicitar_devolucao(
+    item_id: int,
+    usuario: Usuario = Depends(usuario_atual),
+    session: Session = Depends(get_session),
+):
+    """O usuário diz que o item achado é dele. O pedido é registrado uma única vez."""
+    if usuario.perfil == Perfil.admin:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Administradores não solicitam devolução."
+        )
+
+    item = obter_item_ou_404(item_id, session)
+    if item.status != StatusItem.achado:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Só é possível solicitar a devolução de itens achados.",
+        )
+
+    pedido_existente = session.exec(
+        select(SolicitacaoDevolucao).where(
+            SolicitacaoDevolucao.item_id == item.id,
+            SolicitacaoDevolucao.usuario_id == usuario.id,
+        )
+    ).first()
+
+    if pedido_existente is None:
+        session.add(SolicitacaoDevolucao(item_id=item.id, usuario_id=usuario.id))
+        session.commit()
+        session.refresh(item)
+    return item
+
+
+@router.get("/solicitacoes/minhas", response_model=list[ItemPublico])
+def minhas_solicitacoes(
+    usuario: Usuario = Depends(usuario_atual),
+    session: Session = Depends(get_session),
+):
+    """Itens achados que o usuário logado já solicitou."""
+    consulta = (
+        select(Item)
+        .join(SolicitacaoDevolucao, SolicitacaoDevolucao.item_id == Item.id)
+        .where(
+            SolicitacaoDevolucao.usuario_id == usuario.id,
+            Item.status == StatusItem.achado,
+        )
+        .order_by(col(Item.id).desc())
+    )
+    return session.exec(consulta).all()
+
+
+@router.delete("/{item_id}/solicitar", status_code=204)
+def cancelar_solicitacao(
+    item_id: int,
+    usuario: Usuario = Depends(usuario_atual),
+    session: Session = Depends(get_session),
+):
+    """O usuário cancela o próprio pedido. Nunca consegue cancelar o de outra pessoa."""
+    pedido = session.exec(
+        select(SolicitacaoDevolucao).where(
+            SolicitacaoDevolucao.item_id == item_id,
+            SolicitacaoDevolucao.usuario_id == usuario.id,
+        )
+    ).first()
+    if pedido is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "Você não tem solicitação para esse item."
+        )
+    session.delete(pedido)
     session.commit()

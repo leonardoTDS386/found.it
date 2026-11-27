@@ -7,6 +7,7 @@ from sqlmodel import Field, Relationship, SQLModel
 if TYPE_CHECKING:
     from app.models.tipo import Tipo
     from app.models.usuario import Usuario
+    from app.models.solicitacao import SolicitacaoDevolucao
 
 
 class StatusItem(str, Enum):
@@ -46,3 +47,4 @@ class Item(ItemBase, table=True):
 
     tipo: "Tipo" = Relationship(back_populates="itens")
     usuario: "Usuario" = Relationship(back_populates="itens")
+    solicitacoes: list["SolicitacaoDevolucao"] = Relationship(back_populates="item", cascade_delete=True)
